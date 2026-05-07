@@ -1,3 +1,5 @@
+import { Progress } from "@/components/ui/progress";
+
 interface VoteProgressProps {
   yesVotes: number;
   noVotes: number;
@@ -5,33 +7,31 @@ interface VoteProgressProps {
 
 export function VoteProgress({ yesVotes, noVotes }: VoteProgressProps) {
   const total = yesVotes + noVotes;
-  const yesPercent = total > 0 ? (yesVotes / total) * 100 : 50;
-  const noPercent = total > 0 ? (noVotes / total) * 100 : 50;
+  const yesPct = total > 0 ? (yesVotes / total) * 100 : 0;
+  const noPct = total > 0 ? (noVotes / total) * 100 : 0;
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-between text-sm">
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-green-500" />
-          <span>Yes: {yesVotes} ({total > 0 ? yesPercent.toFixed(0) : 0}%)</span>
+      <div>
+        <div className="flex justify-between text-sm mb-1.5">
+          <span className="font-semibold text-green-400">Yes</span>
+          <span className="text-muted-foreground">
+            {yesVotes} ({yesPct.toFixed(1)}%)
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span>No: {noVotes} ({total > 0 ? noPercent.toFixed(0) : 0}%)</span>
-          <div className="h-3 w-3 rounded-full bg-red-500" />
+        <Progress value={yesPct} className="h-2" />
+      </div>
+      <div>
+        <div className="flex justify-between text-sm mb-1.5">
+          <span className="font-semibold text-red-400">No</span>
+          <span className="text-muted-foreground">
+            {noVotes} ({noPct.toFixed(1)}%)
+          </span>
         </div>
+        <Progress value={noPct} className="h-2" />
       </div>
-      <div className="h-4 w-full rounded-full overflow-hidden bg-red-500/20 flex">
-        <div
-          className="h-full bg-green-500 transition-all duration-500"
-          style={{ width: `${yesPercent}%` }}
-        />
-        <div
-          className="h-full bg-red-500 transition-all duration-500"
-          style={{ width: `${noPercent}%` }}
-        />
-      </div>
-      <p className="text-xs text-muted-foreground text-center">
-        {total} total votes
+      <p className="text-xs text-muted-foreground text-center pt-2">
+        {total} total streaming onchain votes
       </p>
     </div>
   );

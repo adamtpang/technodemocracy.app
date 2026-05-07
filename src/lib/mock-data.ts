@@ -1,10 +1,10 @@
 // =============================================================================
 // Mock Data for Technodemocracy App
+//
+// Each "Party" is a digital political party. Joining grants the president a
+// scoped, revocable franchise over the member's wallet (dues, slashing,
+// delegated voting power, social follow). This is the social smart contract.
 // =============================================================================
-
-// -----------------------------------------------------------------------------
-// Types & Interfaces
-// -----------------------------------------------------------------------------
 
 export interface IdeologyScores {
   [key: string]: number;
@@ -15,21 +15,43 @@ export interface IdeologyScores {
   riskTolerance: number;
 }
 
-export interface House {
+export interface FranchiseScope {
+  duesUSDC: number;
+  slashingMaxUSDC: number;
+  delegatedVotingWeight: number;
+  followAddresses: string[];
+  scopes: string[];
+}
+
+export interface CabinetMember {
+  address: string;
+  role: string;
+  powers: string[];
+}
+
+export interface Party {
   id: number;
   name: string;
+  tagline: string;
   description: string;
   memberCount: number;
-  treasuryBalance: number; // in USDC
-  leader: string;
+  treasuryBalance: number;
+  president: string;
+  cabinet: CabinetMember[];
+  franchise: FranchiseScope;
   ideologyScores: IdeologyScores;
-  color: string; // hex
+  color: string;
   emoji: string;
+  foundedAt: string;
+  openProposals: boolean;
+  duesUSDC: number;
 }
+
+export type House = Party;
 
 export interface Member {
   address: string;
-  joinedAt: string; // ISO date string
+  joinedAt: string;
   stakeAmount: number;
 }
 
@@ -44,7 +66,7 @@ export interface Proposal {
   yesVotes: number;
   noVotes: number;
   status: "active" | "passed" | "failed";
-  voters: { address: string; support: boolean; txHash: string }[];
+  voters: { address: string; support: boolean; txHash: string; nftTokenId: number }[];
 }
 
 export interface IdeologyAxis {
@@ -54,16 +76,121 @@ export interface IdeologyAxis {
   highLabel: string;
 }
 
-export interface VoteRecord {
+export interface IVotedNFT {
+  tokenId: number;
   proposalId: number;
+  proposalTitle: string;
+  partyId: number;
+  partyName: string;
+  partyEmoji: string;
+  partyColor: string;
   support: boolean;
   txHash: string;
-  timestamp: string;
+  votedAt: string;
 }
 
-// -----------------------------------------------------------------------------
-// Ideology Axes
-// -----------------------------------------------------------------------------
+export interface NormsVersion {
+  partyId: number;
+  version: number;
+  ipfsCID: string;
+  contentHash: string;
+  publishedAt: string;
+  body: string;
+}
+
+export interface ElectionRace {
+  raceId: number;
+  partyId: number;
+  startTime: string;
+  endTime: string;
+  candidates: { address: string; voteCount: number; manifesto: string }[];
+  finalized: boolean;
+  winner?: string;
+}
+
+export interface PartyEvent {
+  id: number;
+  partyId: number;
+  title: string;
+  description: string;
+  location: string;
+  startTime: string;
+  rsvpCount: number;
+  attended: number;
+  isOnline: boolean;
+}
+
+export interface Dispute {
+  id: number;
+  partyId: number;
+  complainant: string;
+  defendant: string;
+  normVersion: number;
+  evidence: string;
+  status: "pending" | "dismissed" | "slash" | "eject";
+  filedAt: string;
+  resolvedAt?: string;
+  resolutionNote?: string;
+}
+
+export type FeedItemKind = "vote" | "join" | "proposal" | "election" | "found";
+
+export interface FeedItem {
+  id: string;
+  kind: FeedItemKind;
+  partyId: number;
+  actor: string;
+  timestamp: string;
+  payload: Record<string, unknown>;
+  txHash?: string;
+}
+
+export interface UserGrant {
+  partyId: number;
+  joinedAt: string;
+  scopesGranted: string[];
+  duesPaid: number;
+  totalSlashed: number;
+  cabinetRole?: string;
+}
+
+export interface PartyPost {
+  id: number;
+  partyId: number;
+  author: string;
+  authorName: string;
+  authorHandle: string;
+  authorVerified?: boolean;
+  body: string;
+  createdAt: string;
+  replies: number;
+  recasts: number;
+  likes: number;
+}
+
+export interface SlateMember {
+  address: string;
+  name: string;
+  handle: string;
+  role: "President" | "VP" | "Treasurer" | "Cabinet";
+}
+
+export interface PartySocialMeta {
+  /** President's display name + handle (Twitter/Farcaster style). */
+  presidentName: string;
+  presidentHandle: string;
+  presidentVerified?: boolean;
+  /** Long bio shown on the party landing. */
+  bio: string;
+  /** Slate the user votes for via the franchise consent screen. */
+  slate: SlateMember[];
+  /** "X, Y, and Z" — names shown in the social proof line. */
+  socialProofNames: string[];
+  /** Funding goal for the year, USDC. */
+  fundingGoalUSDC: number;
+  /** Current raised amount, USDC. */
+  fundingRaisedUSDC: number;
+}
 
 export const IDEOLOGY_AXES: IdeologyAxis[] = [
   { key: "longevity", label: "Longevity", lowLabel: "YOLO", highLabel: "Forever" },
@@ -73,421 +200,622 @@ export const IDEOLOGY_AXES: IdeologyAxis[] = [
   { key: "riskTolerance", label: "Risk Tolerance", lowLabel: "Conservative", highLabel: "Degen" },
 ];
 
-// -----------------------------------------------------------------------------
-// Current User
-// -----------------------------------------------------------------------------
+export const DEMO_USER_ADDRESS = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+export const CURRENT_USER_ADDRESS = DEMO_USER_ADDRESS;
+export const CURRENT_USER_PARTY_ID = 1;
+export const CURRENT_USER_STAKE = 100;
+export const CURRENT_USER_HOUSE_ID = CURRENT_USER_PARTY_ID;
 
-export const CURRENT_USER_ADDRESS = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
-export const CURRENT_USER_HOUSE_ID = 1;
-export const CURRENT_USER_STAKE = 10;
-
-// -----------------------------------------------------------------------------
-// Houses
-// -----------------------------------------------------------------------------
-
-export const HOUSES: House[] = [
+export const DEMO_USER_GRANTS: UserGrant[] = [
   {
-    id: 1,
-    name: "Builders Guild",
-    description:
-      "Ship code, build products, move fast. We believe in creating tangible value through technology.",
-    memberCount: 28,
-    treasuryBalance: 14200,
-    leader: "0x1234567890aBcDeF1234567890AbCdEf12345678",
-    ideologyScores: {
-      longevity: 5,
-      decentralization: 7,
-      builderCurator: 9,
-      socialSolo: 6,
-      riskTolerance: 8,
-    },
-    color: "#6366f1",
-    emoji: "\u{1F6E0}\u{FE0F}",
+    partyId: 1,
+    joinedAt: "2026-02-15T08:00:00Z",
+    scopesGranted: [
+      "Vote for me as President of Don't Die",
+      "Auto-debit 100 USDC annual party dues",
+      "Slash up to 100 USDC of staked funds for norm violation",
+      "Commit to Blueprint protocol attendance",
+    ],
+    duesPaid: 100,
+    totalSlashed: 0,
   },
   {
-    id: 2,
-    name: "Harmony Circle",
-    description:
-      "Community wellness, longevity research, and sustainable living. Health is the ultimate wealth.",
-    memberCount: 22,
-    treasuryBalance: 8400,
-    leader: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567",
-    ideologyScores: {
-      longevity: 9,
-      decentralization: 5,
-      builderCurator: 4,
-      socialSolo: 9,
-      riskTolerance: 3,
-    },
-    color: "#10b981",
-    emoji: "\u{1F33F}",
+    partyId: 3,
+    joinedAt: "2026-01-08T11:30:00Z",
+    scopesGranted: [
+      "Vote for me as President of Open-Source AI Party",
+      "Delegate 5% of voting weight on training-budget proposals",
+      "Auto-debit 50 USDC annual party dues",
+      "Commit weights from any party-funded training to public repo",
+    ],
+    duesPaid: 50,
+    totalSlashed: 0,
+    cabinetRole: "Compute Steward",
   },
   {
-    id: 3,
-    name: "Sovereign Node",
-    description:
-      "Decentralization maximalists. Privacy, autonomy, and self-sovereignty are non-negotiable.",
-    memberCount: 18,
-    treasuryBalance: 22100,
-    leader: "0x9876FeDcBa0987654321FeDcBa09876543210000",
-    ideologyScores: {
-      longevity: 6,
-      decentralization: 10,
-      builderCurator: 7,
-      socialSolo: 3,
-      riskTolerance: 7,
-    },
-    color: "#f59e0b",
-    emoji: "\u{1F6E1}\u{FE0F}",
-  },
-  {
-    id: 4,
-    name: "Culture Lab",
-    description:
-      "Art, curation, social experiments, and cultural innovation. We shape the vibe.",
-    memberCount: 15,
-    treasuryBalance: 5800,
-    leader: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf",
-    ideologyScores: {
-      longevity: 4,
-      decentralization: 6,
-      builderCurator: 3,
-      socialSolo: 8,
-      riskTolerance: 6,
-    },
-    color: "#ec4899",
-    emoji: "\u{1F3A8}",
+    partyId: 4,
+    joinedAt: "2026-03-22T14:00:00Z",
+    scopesGranted: [
+      "Vote for me as President of Network State Party",
+      "Auto-debit 75 USDC annual party dues",
+      "Allow proof-of-residence attestations on census day",
+    ],
+    duesPaid: 75,
+    totalSlashed: 0,
   },
 ];
 
-// -----------------------------------------------------------------------------
-// Members (by house)
-// -----------------------------------------------------------------------------
+export const PARTIES: Party[] = [
+  {
+    id: 1,
+    name: "Don't Die Party",
+    tagline: "Longevity",
+    description:
+      "Founded by Bryan Johnson. Optimize the body, defeat aging, refuse death. Members commit to Blueprint protocols and shared longevity research.",
+    memberCount: 13439,
+    treasuryBalance: 482000,
+    president: "0x1234567890aBcDeF1234567890AbCdEf12345678",
+    cabinet: [
+      { address: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5", role: "Vice President", powers: ["Co-sign treasury spends > $5k", "Name interim dispute resolver"] },
+      { address: "0x3F4E5D6C7B8A90010203F4e5D6c7B8a900102030", role: "Treasurer", powers: ["Propose spends ≤ $5k", "Publish quarterly budget onchain"] },
+    ],
+    franchise: {
+      duesUSDC: 100, slashingMaxUSDC: 100, delegatedVotingWeight: 0.0,
+      followAddresses: ["0x1234567890aBcDeF1234567890AbCdEf12345678", "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5"],
+      scopes: [
+        "Vote for me as President of Don't Die",
+        "Name me dispute resolver for party governance",
+        "Slash up to 100 USDC of staked funds for norm violation",
+        "Auto-debit 100 USDC annual party dues",
+        "Commit to Blueprint protocol attendance",
+      ],
+    },
+    ideologyScores: { longevity: 10, decentralization: 5, builderCurator: 7, socialSolo: 6, riskTolerance: 4 },
+    color: "#10b981", emoji: "\u{1F33F}",
+    foundedAt: "2025-09-01T00:00:00Z", openProposals: true, duesUSDC: 100,
+  },
+  {
+    id: 2,
+    name: "Mars Party",
+    tagline: "Multiplanetary",
+    description: "Make humanity multiplanetary. Members commit time and capital to advancing space technology, terraforming, and the off-world economy.",
+    memberCount: 8721, treasuryBalance: 920000,
+    president: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567",
+    cabinet: [
+      { address: "0xB2C3D4E5F6071829A3b4c5D6E7F89001a2345678", role: "Chief Engineer", powers: ["Allocate engineering grants ≤ $25k", "Veto proposals on launch safety"] },
+      { address: "0xC3D4E5F60718293aB4c5D6e7F89001A23456789a", role: "Treasurer", powers: ["Propose spends ≤ $10k", "Publish monthly burn rate onchain"] },
+    ],
+    franchise: {
+      duesUSDC: 250, slashingMaxUSDC: 250, delegatedVotingWeight: 0.1,
+      followAddresses: ["0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567", "0xB2C3D4E5F6071829A3b4c5D6E7F89001a2345678"],
+      scopes: [
+        "Vote for me as President of Mars Party",
+        "Delegate 10% of voting weight on launch-window decisions",
+        "Slash up to 250 USDC for missed mission commitments",
+        "Auto-debit 250 USDC annual party dues",
+        "Subscribe to monthly mission updates",
+      ],
+    },
+    ideologyScores: { longevity: 6, decentralization: 4, builderCurator: 10, socialSolo: 5, riskTolerance: 9 },
+    color: "#ef4444", emoji: "\u{1F680}",
+    foundedAt: "2025-07-04T00:00:00Z", openProposals: false, duesUSDC: 250,
+  },
+  {
+    id: 3,
+    name: "Open-Source AI Party",
+    tagline: "OSS AI",
+    description: "Models should be open. Weights should be free. Members fund OSS model training, GPU collectives, and open-eval infrastructure.",
+    memberCount: 5102, treasuryBalance: 310000,
+    president: "0x9876FeDcBa0987654321FeDcBa09876543210000",
+    cabinet: [
+      { address: "0x8765FeDcBa098765432100AbCdEf1234567890aB", role: "Vice President", powers: ["Co-sign GPU grant releases", "Approve party-wide research RFPs"] },
+      { address: "0x7654FeDcBa0987654321AbCdEf01234567890aBc", role: "Compute Steward", powers: ["Allocate GPU credits ≤ $15k", "Onboard new training partners"] },
+    ],
+    franchise: {
+      duesUSDC: 50, slashingMaxUSDC: 50, delegatedVotingWeight: 0.05,
+      followAddresses: ["0x9876FeDcBa0987654321FeDcBa09876543210000", "0x8765FeDcBa098765432100AbCdEf1234567890aB"],
+      scopes: [
+        "Vote for me as President of Open-Source AI Party",
+        "Delegate 5% of voting weight on training-budget proposals",
+        "Slash up to 50 USDC for closed-model norm violations",
+        "Auto-debit 50 USDC annual party dues",
+        "Commit weights from any party-funded training to public repo",
+      ],
+    },
+    ideologyScores: { longevity: 5, decentralization: 9, builderCurator: 9, socialSolo: 4, riskTolerance: 7 },
+    color: "#6366f1", emoji: "\u{1F916}",
+    foundedAt: "2025-05-15T00:00:00Z", openProposals: true, duesUSDC: 50,
+  },
+  {
+    id: 4,
+    name: "Network State Party",
+    tagline: "Onchain Polities",
+    description: "Build the cloud-first, land-second nation. Members coordinate offline meetups, contribute to network-state infrastructure, and vote in censorship-resistant elections.",
+    memberCount: 21008, treasuryBalance: 1240000,
+    president: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf",
+    cabinet: [
+      { address: "0xDeAdBeEf00112233445566778899aAbBcCdDeEfF", role: "Vice President", powers: ["Approve network-state grants ≤ $20k", "Run election infrastructure"] },
+      { address: "0xFaCeFeed00112233445566778899AABBccDDeeFF", role: "Treasurer", powers: ["Propose spends ≤ $10k", "Issue quarterly network-state budget"] },
+      { address: "0xBaD00Dad00112233445566778899aaBBCCddEEff", role: "Diplomat", powers: ["Negotiate cross-party alliances", "Sign census attestations"] },
+    ],
+    franchise: {
+      duesUSDC: 75, slashingMaxUSDC: 75, delegatedVotingWeight: 0.15,
+      followAddresses: ["0xCaFeBaBe00112233445566778899AaBbCcDdEeFf", "0xDeAdBeEf00112233445566778899aAbBcCdDeEfF", "0xFaCeFeed00112233445566778899AABBccDDeeFF"],
+      scopes: [
+        "Vote for me as President of Network State Party",
+        "Delegate 15% of voting weight on diplomatic proposals",
+        "Slash up to 75 USDC for census-fraud or sybil violations",
+        "Auto-debit 75 USDC annual party dues",
+        "Allow proof-of-residence attestations on census day",
+      ],
+    },
+    ideologyScores: { longevity: 7, decentralization: 10, builderCurator: 8, socialSolo: 8, riskTolerance: 6 },
+    color: "#f59e0b", emoji: "\u{1F30D}",
+    foundedAt: "2025-04-20T00:00:00Z", openProposals: true, duesUSDC: 75,
+  },
+];
+
+export const HOUSES = PARTIES;
+export const houses = PARTIES;
+export const parties = PARTIES;
 
 export const MEMBERS: Record<number, Member[]> = {
-  // Builders Guild
   1: [
-    { address: CURRENT_USER_ADDRESS, joinedAt: "2025-09-15T08:00:00Z", stakeAmount: 10 },
-    { address: "0x1234567890aBcDeF1234567890AbCdEf12345678", joinedAt: "2025-08-01T12:30:00Z", stakeAmount: 25 },
-    { address: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5", joinedAt: "2025-08-20T09:15:00Z", stakeAmount: 15 },
-    { address: "0x3F4E5D6C7B8A90010203F4e5D6c7B8a900102030", joinedAt: "2025-09-02T14:45:00Z", stakeAmount: 12 },
-    { address: "0x5A6B7C8D9E0F1A2B3C4D5a6b7C8d9E0f1A2b3C4D", joinedAt: "2025-10-10T11:00:00Z", stakeAmount: 8 },
-    { address: "0x7E8F9A0B1C2D3E4F5A6B7e8f9A0b1C2d3E4f5A6B", joinedAt: "2025-11-05T16:20:00Z", stakeAmount: 20 },
+    { address: CURRENT_USER_ADDRESS, joinedAt: "2026-02-15T08:00:00Z", stakeAmount: 100 },
+    { address: "0x1234567890aBcDeF1234567890AbCdEf12345678", joinedAt: "2025-09-01T12:30:00Z", stakeAmount: 500 },
+    { address: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5", joinedAt: "2025-09-20T09:15:00Z", stakeAmount: 250 },
+    { address: "0x3F4E5D6C7B8A90010203F4e5D6c7B8a900102030", joinedAt: "2025-10-02T14:45:00Z", stakeAmount: 200 },
+    { address: "0x5A6B7C8D9E0F1A2B3C4D5a6b7C8d9E0f1A2b3C4D", joinedAt: "2025-11-10T11:00:00Z", stakeAmount: 100 },
+    { address: "0x7E8F9A0B1C2D3E4F5A6B7e8f9A0b1C2d3E4f5A6B", joinedAt: "2026-01-05T16:20:00Z", stakeAmount: 150 },
   ],
-  // Harmony Circle
   2: [
-    { address: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567", joinedAt: "2025-07-10T10:00:00Z", stakeAmount: 30 },
-    { address: "0xB2C3D4E5F6071829A3b4c5D6E7F89001a2345678", joinedAt: "2025-08-15T07:30:00Z", stakeAmount: 18 },
-    { address: "0xC3D4E5F60718293aB4c5D6e7F89001A23456789a", joinedAt: "2025-09-01T13:00:00Z", stakeAmount: 10 },
-    { address: "0xD4E5F60718293Ab4C5d6E7f89001a23456789AbC", joinedAt: "2025-09-22T08:45:00Z", stakeAmount: 14 },
-    { address: "0xE5F60718293aB4c5D6E7F89001A23456789aBcDe", joinedAt: "2025-10-30T15:10:00Z", stakeAmount: 9 },
+    { address: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567", joinedAt: "2025-07-04T10:00:00Z", stakeAmount: 1000 },
+    { address: "0xB2C3D4E5F6071829A3b4c5D6E7F89001a2345678", joinedAt: "2025-07-15T07:30:00Z", stakeAmount: 500 },
+    { address: "0xC3D4E5F60718293aB4c5D6e7F89001A23456789a", joinedAt: "2025-08-01T13:00:00Z", stakeAmount: 250 },
+    { address: "0xD4E5F60718293Ab4C5d6E7f89001a23456789AbC", joinedAt: "2025-09-22T08:45:00Z", stakeAmount: 350 },
+    { address: "0xE5F60718293aB4c5D6E7F89001A23456789aBcDe", joinedAt: "2025-10-30T15:10:00Z", stakeAmount: 250 },
   ],
-  // Sovereign Node
   3: [
-    { address: "0x9876FeDcBa0987654321FeDcBa09876543210000", joinedAt: "2025-06-20T09:00:00Z", stakeAmount: 50 },
-    { address: "0x8765FeDcBa098765432100AbCdEf1234567890aB", joinedAt: "2025-07-05T12:00:00Z", stakeAmount: 22 },
-    { address: "0x7654FeDcBa0987654321AbCdEf01234567890aBc", joinedAt: "2025-08-18T10:30:00Z", stakeAmount: 16 },
-    { address: "0x6543FeDcBa09876543210AbCdEf234567890aBcD", joinedAt: "2025-09-11T14:00:00Z", stakeAmount: 35 },
-    { address: "0x5432FeDcBa098765432100aBcDeF34567890AbCd", joinedAt: "2025-10-25T07:15:00Z", stakeAmount: 11 },
-    { address: "0x4321FeDcBa0987654321AbCdEf4567890aBcDeF0", joinedAt: "2025-12-01T18:00:00Z", stakeAmount: 8 },
+    { address: "0x9876FeDcBa0987654321FeDcBa09876543210000", joinedAt: "2025-05-15T09:00:00Z", stakeAmount: 200 },
+    { address: "0x8765FeDcBa098765432100AbCdEf1234567890aB", joinedAt: "2025-06-05T12:00:00Z", stakeAmount: 150 },
+    { address: "0x7654FeDcBa0987654321AbCdEf01234567890aBc", joinedAt: "2025-08-18T10:30:00Z", stakeAmount: 100 },
   ],
-  // Culture Lab
   4: [
-    { address: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf", joinedAt: "2025-08-05T11:00:00Z", stakeAmount: 20 },
-    { address: "0xDeAdBeEf00112233445566778899aAbBcCdDeEfF", joinedAt: "2025-08-28T09:30:00Z", stakeAmount: 12 },
-    { address: "0xFaCeFeed00112233445566778899AABBccDDeeFF", joinedAt: "2025-09-14T13:45:00Z", stakeAmount: 7 },
-    { address: "0xBaD00Dad00112233445566778899aaBBCCddEEff", joinedAt: "2025-10-02T16:00:00Z", stakeAmount: 15 },
-    { address: "0xC0ffEE0000112233445566778899AaBbCcDdEeFf", joinedAt: "2025-11-18T08:20:00Z", stakeAmount: 5 },
+    { address: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf", joinedAt: "2025-04-20T11:00:00Z", stakeAmount: 750 },
+    { address: "0xDeAdBeEf00112233445566778899aAbBcCdDeEfF", joinedAt: "2025-05-28T09:30:00Z", stakeAmount: 300 },
+    { address: "0xFaCeFeed00112233445566778899AABBccDDeeFF", joinedAt: "2025-06-14T13:45:00Z", stakeAmount: 175 },
   ],
 };
 
-// -----------------------------------------------------------------------------
-// Proposals
-// -----------------------------------------------------------------------------
-
 export const PROPOSALS: Proposal[] = [
-  // 1 — Builders Guild (active)
   {
-    id: 1,
-    houseId: 1,
-    title: "Fund Hackathon Prize Pool",
-    description:
-      "Allocate 2,000 USDC from the treasury to fund prizes for our upcoming internal hackathon. Prizes will be split across three tracks: DeFi, public goods, and wildcard.",
+    id: 1, houseId: 1,
+    title: "Fund Blueprint Protocol Onboarding for 100 New Members",
+    description: "Allocate 25,000 USDC to subsidize the first month of Blueprint protocol supplements and biomarkers for 100 new Don't Die members.",
     author: "0x1234567890aBcDeF1234567890AbCdEf12345678",
-    startTime: "2026-02-25T00:00:00Z",
-    endTime: "2026-03-05T00:00:00Z",
-    yesVotes: 18,
-    noVotes: 3,
-    status: "active",
+    startTime: "2026-04-25T00:00:00Z", endTime: "2026-05-02T00:00:00Z",
+    yesVotes: 18, noVotes: 3, status: "active",
     voters: [
-      { address: CURRENT_USER_ADDRESS, support: true, txHash: "0xa1b2c3d4e5f6071829304050607080901a2b3c4d5e6f071829304050607080ab" },
-      { address: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5", support: true, txHash: "0xb2c3d4e5f60718293040506070809010a2b3c4d5e6f0718293040506070809cd" },
-      { address: "0x3F4E5D6C7B8A90010203F4e5D6c7B8a900102030", support: true, txHash: "0xc3d4e5f607182930405060708090102a2b3c4d5e6f07182930405060708090ef" },
-      { address: "0x5A6B7C8D9E0F1A2B3C4D5a6b7C8d9E0f1A2b3C4D", support: true, txHash: "0xd4e5f6071829304050607080901020a2b3c4d5e6f0718293040506070809abcd" },
-      { address: "0x7E8F9A0B1C2D3E4F5A6B7e8f9A0b1C2d3E4f5A6B", support: false, txHash: "0xe5f60718293040506070809010203a2b3c4d5e6f07182930405060708090dead" },
-      { address: "0x1234567890aBcDeF1234567890AbCdEf12345678", support: true, txHash: "0xf607182930405060708090102030a2b3c4d5e6f071829304050607080901beef" },
-      { address: "0x4A5B6C7D8E9F0A1B2C3D4a5B6c7d8E9f0a1B2C3D", support: true, txHash: "0x0718293040506070809010203040a2b3c4d5e6f07182930405060708090cafe0" },
-      { address: "0x6C7D8E9F0A1B2C3D4E5F6c7D8e9f0A1b2C3d4E5F", support: true, txHash: "0x1829304050607080901020304050a2b3c4d5e6f0718293040506070809012345" },
-      { address: "0x8E9F0A1B2C3D4E5F6A7B8e9f0A1b2C3d4e5F6a7B", support: true, txHash: "0x2930405060708090102030405060a2b3c4d5e6f071829304050607080906789a" },
-      { address: "0x0A1B2C3D4E5F6A7B8C9D0a1B2c3D4e5f6A7b8C9D", support: true, txHash: "0x3040506070809010203040506070a2b3c4d5e6f07182930405060708090bcdef" },
-      { address: "0xABCD1234EF567890AB12CD34EF5678901234ABCD", support: true, txHash: "0x4050607080901020304050607080a2b3c4d5e6f07182930405060708090aabb0" },
-      { address: "0xEF567890ABCD1234EF5678901234ABCDEF567890", support: true, txHash: "0x5060708090102030405060708090a2b3c4d5e6f071829304050607080901122a" },
-      { address: "0x1122334455667788990011223344556677889900", support: true, txHash: "0x6070809010203040506070809010a2b3c4d5e6f07182930405060708090ccdd0" },
-      { address: "0xAABBCCDDEEFF00112233445566778899AABBCCDD", support: true, txHash: "0x7080901020304050607080901020a2b3c4d5e6f07182930405060708090eeff0" },
-      { address: "0x99887766554433221100FFEEDDCCBBAA99887766", support: true, txHash: "0x8090102030405060708090102030a2b3c4d5e6f071829304050607080901234a" },
-      { address: "0x0011223344556677AABBCCDDEEFF001122334455", support: true, txHash: "0x9010203040506070809010203040a2b3c4d5e6f07182930405060708090567ab" },
-      { address: "0x5566778899001122AABBCCDDEEFF001122334455", support: true, txHash: "0xa020304050607080901020304050a2b3c4d5e6f071829304050607080908901c" },
-      { address: "0x4455667700112233AABBCCDDEEFF001122334455", support: true, txHash: "0xb030405060708090102030405060a2b3c4d5e6f07182930405060708090abcde" },
-      { address: "0x6677889900112233AABBCCDDEEFF001122334455", support: false, txHash: "0xc040506070809010203040506070a2b3c4d5e6f07182930405060708090faded" },
-      { address: "0x8899001122334455AABBCCDDEEFF001122334455", support: true, txHash: "0xd050607080901020304050607080a2b3c4d5e6f07182930405060708090de1e7" },
-      { address: "0x2233445566778899AABBCCDDEEFF001122334455", support: false, txHash: "0xe060708090102030405060708090a2b3c4d5e6f071829304050607080900dead" },
+      { address: CURRENT_USER_ADDRESS, support: true, txHash: "0xa1b2c3d4e5f6071829304050607080901a2b3c4d5e6f071829304050607080ab", nftTokenId: 1001 },
+      { address: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5", support: true, txHash: "0xb2c3d4e5f60718293040506070809010a2b3c4d5e6f0718293040506070809cd", nftTokenId: 1002 },
+      { address: "0x3F4E5D6C7B8A90010203F4e5D6c7B8a900102030", support: true, txHash: "0xc3d4e5f607182930405060708090102a2b3c4d5e6f07182930405060708090ef", nftTokenId: 1003 },
+      { address: "0x7E8F9A0B1C2D3E4F5A6B7e8f9A0b1C2d3E4f5A6B", support: false, txHash: "0xe5f60718293040506070809010203a2b3c4d5e6f07182930405060708090dead", nftTokenId: 1005 },
     ],
   },
-
-  // 2 — Harmony Circle (passed)
   {
-    id: 2,
-    houseId: 2,
-    title: "Weekly Meditation Sessions",
-    description:
-      "Establish weekly guided meditation sessions for house members. Budget 200 USDC/month for a qualified facilitator and hosting costs.",
-    author: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567",
-    startTime: "2026-02-01T00:00:00Z",
-    endTime: "2026-02-15T00:00:00Z",
-    yesVotes: 15,
-    noVotes: 4,
-    status: "passed",
-    voters: [
-      { address: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567", support: true, txHash: "0x11a2b3c4d5e6f0718293040506070809010203040506070809010203040506ab" },
-      { address: "0xB2C3D4E5F6071829A3b4c5D6E7F89001a2345678", support: true, txHash: "0x22b3c4d5e6f07182930405060708090102030405060708090102030405060cd" },
-      { address: "0xC3D4E5F60718293aB4c5D6e7F89001A23456789a", support: true, txHash: "0x33c4d5e6f071829304050607080901020304050607080901020304050607ef01" },
-      { address: "0xD4E5F60718293Ab4C5d6E7f89001a23456789AbC", support: false, txHash: "0x44d5e6f0718293040506070809010203040506070809010203040506070812ab" },
-      { address: "0xE5F60718293aB4c5D6E7F89001A23456789aBcDe", support: true, txHash: "0x55e6f071829304050607080901020304050607080901020304050607081234cd" },
-      { address: "0xF60718293aB4c5D6E7F89001A234567890aBcDeF", support: true, txHash: "0x66f0718293040506070809010203040506070809010203040506070809015678" },
-      { address: "0x0718293aB4c5D6E7F89001A23456789aBcDeFa12", support: true, txHash: "0x77071829304050607080901020304050607080901020304050607080901789ab" },
-      { address: "0x18293aB4c5D6E7F89001A234567890aBcDeF1234", support: true, txHash: "0x88182930405060708090102030405060708090102030405060708090189abcde" },
-      { address: "0x293aB4c5D6E7F89001A2345678901aBcDeF12345", support: false, txHash: "0x9929304050607080901020304050607080901020304050607080901901234ef" },
-      { address: "0x3aB4c5D6E7F89001A2345678901AbCdEf1234567", support: true, txHash: "0xaa30405060708090102030405060708090102030405060708090102a0abcde01" },
-      { address: "0x4Bc5D6E7F89001A234567890aBcDeF12345678901", support: true, txHash: "0xbb4050607080901020304050607080901020304050607080901020b0bcdef012" },
-      { address: "0x5cD6E7F89001A2345678901AbCdEf123456789012", support: true, txHash: "0xcc50607080901020304050607080901020304050607080901020c0cdef01234a" },
-      { address: "0x6dE7F89001A23456789012AbCdEf1234567890123", support: true, txHash: "0xdd6070809010203040506070809010203040506070809010203d0def0123456b" },
-      { address: "0x7eF89001A234567890123AbCdEf12345678901234", support: false, txHash: "0xee70809010203040506070809010203040506070809010203e0ef012345678cd" },
-      { address: "0x8f9001A2345678901234AbCdEf123456789012345", support: true, txHash: "0xff8090102030405060708090102030405060708090102030f0f012345678abef" },
-      { address: "0x90A1B2C3D4E5F607182930A1b2C3d4E5f6071829", support: true, txHash: "0x009010203040506070809010203040506070809010203040000123456789abcd" },
-      { address: "0xA1B2C3D4E5F6071829304050A1b2C3d4E5f60718", support: true, txHash: "0x11a020304050607080901020304050607080901020304050111234567890abce" },
-      { address: "0xB2C3D4E5F60718293040506070B2c3D4e5F60718", support: true, txHash: "0x22b030405060708090102030405060708090102030405060222345678901bcdf" },
-      { address: "0xC3D4E5F6071829304050607080C3d4E5f6071829", support: false, txHash: "0x33c040506070809010203040506070809010203040506070333456789012cdef" },
-    ],
-  },
-
-  // 3 — Sovereign Node (active)
-  {
-    id: 3,
-    houseId: 3,
-    title: "Implement Anonymous Voting",
-    description:
-      "Integrate ZK-proof based anonymous voting for all house proposals. Estimated development cost: 3,500 USDC for an external auditor and tooling.",
-    author: "0x9876FeDcBa0987654321FeDcBa09876543210000",
-    startTime: "2026-02-28T00:00:00Z",
-    endTime: "2026-03-07T00:00:00Z",
-    yesVotes: 12,
-    noVotes: 5,
-    status: "active",
-    voters: [
-      { address: "0x9876FeDcBa0987654321FeDcBa09876543210000", support: true, txHash: "0xaa11223344556677889900aabbccddeeff00112233445566778899aabbccddee" },
-      { address: "0x8765FeDcBa098765432100AbCdEf1234567890aB", support: true, txHash: "0xbb22334455667788990011aabbccddeeff112233445566778899aabbccddeeff" },
-      { address: "0x7654FeDcBa0987654321AbCdEf01234567890aBc", support: true, txHash: "0xcc33445566778899001122aabbccddeeff223344556677889900aabbccddeef0" },
-      { address: "0x6543FeDcBa09876543210AbCdEf234567890aBcD", support: false, txHash: "0xdd44556677889900112233aabbccddeeff334455667788990011aabbccddeef1" },
-      { address: "0x5432FeDcBa098765432100aBcDeF34567890AbCd", support: true, txHash: "0xee55667788990011223344aabbccddeeff445566778899001122aabbccddeef2" },
-      { address: "0x4321FeDcBa0987654321AbCdEf4567890aBcDeF0", support: true, txHash: "0xff66778899001122334455aabbccddeeff556677889900112233aabbccddeef3" },
-      { address: "0x3210FeDcBa0987654321AbCdEf567890aBcDeF01", support: false, txHash: "0x0077889900112233445566aabbccddeeff667788990011223344aabbccddeef4" },
-      { address: "0x2109FeDcBa0987654321AbCdEf67890aBcDeF012", support: true, txHash: "0x118899001122334455667700aabbccddeeff778899001122334455aabbccddee" },
-      { address: "0x1098FeDcBa0987654321AbCdEf7890aBcDeF0123", support: true, txHash: "0x2299001122334455667788aabbccddeeff88990011223344556677aabbccddef" },
-      { address: "0x0987FeDcBa0987654321AbCdEf890aBcDeF01234", support: true, txHash: "0x3300112233445566778899aabbccddeeff990011223344556677889aabbccddf" },
-      { address: "0xF876FeDcBa0987654321AbCdEf90aBcDeF012345", support: false, txHash: "0x4411223344556677889900aabbccddeeffaa00112233445566778899aabbccde" },
-      { address: "0xE765FeDcBa0987654321AbCdEfa0aBcDeF012346", support: true, txHash: "0x5522334455667788990011aabbccddeeffbb11223344556677889900aabbccdf" },
-      { address: "0xD654FeDcBa0987654321AbCdEfb0aBcDeF012347", support: true, txHash: "0x6633445566778899001122aabbccddeeffcc22334455667788990011aabbccde" },
-      { address: "0xC543FeDcBa0987654321AbCdEfc0aBcDeF012348", support: false, txHash: "0x7744556677889900112233aabbccddeeffdd33445566778899001122aabbccdf" },
-      { address: "0xB432FeDcBa0987654321AbCdEfd0aBcDeF012349", support: true, txHash: "0x8855667788990011223344aabbccddeeffee44556677889900112233aabbccde" },
-      { address: "0xA321FeDcBa0987654321AbCdEfe0aBcDeF01234a", support: true, txHash: "0x9966778899001122334455aabbccddeefff055667788990011223344aabbccdf" },
-      { address: "0x9210FeDcBa0987654321AbCdEff0aBcDeF01234b", support: false, txHash: "0xaa77889900112233445566aabbccddeeff006677889900112233445aabbccdde" },
-    ],
-  },
-
-  // 4 — Culture Lab (passed)
-  {
-    id: 4,
-    houseId: 4,
-    title: "Community Art Gallery",
-    description:
-      "Create a virtual gallery showcasing member-created digital art. Budget 800 USDC for platform setup and curation rewards.",
-    author: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf",
-    startTime: "2026-01-20T00:00:00Z",
-    endTime: "2026-02-03T00:00:00Z",
-    yesVotes: 11,
-    noVotes: 2,
-    status: "passed",
-    voters: [
-      { address: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf", support: true, txHash: "0x1100aabbccddeeff00112233445566778899aabbccddeeff0011223344556677" },
-      { address: "0xDeAdBeEf00112233445566778899aAbBcCdDeEfF", support: true, txHash: "0x2200bbccddeeff0011223344556677889900aabbccddeeff1122334455667788" },
-      { address: "0xFaCeFeed00112233445566778899AABBccDDeeFF", support: true, txHash: "0x3300ccddeeff00112233445566778899aabb00ccddeeff2233445566778899ab" },
-      { address: "0xBaD00Dad00112233445566778899aaBBCCddEEff", support: false, txHash: "0x4400ddeeff0011223344556677889900aabbcc00ddeeff334455667788990abc" },
-      { address: "0xC0ffEE0000112233445566778899AaBbCcDdEeFf", support: true, txHash: "0x5500eeff00112233445566778899aabbccdd00eeff44556677889900aabb0cde" },
-      { address: "0xF00dCafe00112233445566778899AaBbCcDdEeFf", support: true, txHash: "0x6600ff0011223344556677889900aabbccddeeff005566778899001122bb0def" },
-      { address: "0xBeEfCafe00112233445566778899AaBbCcDdEeFf", support: true, txHash: "0x7700001122334455667788990011aabbccddeeff66778899001122334400ef01" },
-      { address: "0xDeCaFBad00112233445566778899AaBbCcDdEeFf", support: true, txHash: "0x8800112233445566778899001122aabbccddeeff7788990011223344550f0123" },
-      { address: "0xAceBa5e000112233445566778899AaBbCcDdEeFf", support: true, txHash: "0x99001122334455667788990011223aabbccddeeff889900112233445566012345" },
-      { address: "0xBa5eBa1100112233445566778899AaBbCcDdEeFf", support: true, txHash: "0xaa0112233445566778899001122334aabbccddeeff990011223344556677abcde" },
-      { address: "0xCa5caDe000112233445566778899AaBbCcDdEeFf", support: false, txHash: "0xbb01223344556677889900112233445aabbccddeeffaa001122334455667bcdef" },
-      { address: "0xDa7aBa5e00112233445566778899AaBbCcDdEeFf", support: true, txHash: "0xcc0122334455667788990011223344556aabbccddeeffbb0011223344556cdef0" },
-      { address: "0xFa11Bac000112233445566778899AaBbCcDdEeFf", support: true, txHash: "0xdd012233445566778899001122334455667aabbccddeeffcc001122334455def1" },
-    ],
-  },
-
-  // 5 — Builders Guild (active)
-  {
-    id: 5,
-    houseId: 1,
-    title: "Upgrade Dev Infrastructure",
-    description:
-      "Migrate CI/CD pipelines and upgrade testing infrastructure. Estimated cost: 1,200 USDC for cloud credits and tooling licenses.",
-    author: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5",
-    startTime: "2026-03-01T00:00:00Z",
-    endTime: "2026-03-08T00:00:00Z",
-    yesVotes: 8,
-    noVotes: 1,
-    status: "active",
-    voters: [
-      { address: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5", support: true, txHash: "0xab01020304050607080910111213141516171819202122232425262728293031" },
-      { address: CURRENT_USER_ADDRESS, support: true, txHash: "0xbc02030405060708091011121314151617181920212223242526272829303132" },
-      { address: "0x1234567890aBcDeF1234567890AbCdEf12345678", support: true, txHash: "0xcd03040506070809101112131415161718192021222324252627282930313233" },
-      { address: "0x3F4E5D6C7B8A90010203F4e5D6c7B8a900102030", support: true, txHash: "0xde04050607080910111213141516171819202122232425262728293031323334" },
-      { address: "0x5A6B7C8D9E0F1A2B3C4D5a6b7C8d9E0f1A2b3C4D", support: true, txHash: "0xef05060708091011121314151617181920212223242526272829303132333435" },
-      { address: "0x7E8F9A0B1C2D3E4F5A6B7e8f9A0b1C2d3E4f5A6B", support: true, txHash: "0xf006070809101112131415161718192021222324252627282930313233343536" },
-      { address: "0x4A5B6C7D8E9F0A1B2C3D4a5B6c7d8E9f0a1B2C3D", support: true, txHash: "0x0107080910111213141516171819202122232425262728293031323334353637" },
-      { address: "0x6C7D8E9F0A1B2C3D4E5F6c7D8e9f0A1b2C3d4E5F", support: false, txHash: "0x0208091011121314151617181920212223242526272829303132333435363738" },
-      { address: "0x8E9F0A1B2C3D4E5F6A7B8e9f0A1b2C3d4e5F6a7B", support: true, txHash: "0x0309101112131415161718192021222324252627282930313233343536373839" },
-    ],
-  },
-
-  // 6 — Harmony Circle (active)
-  {
-    id: 6,
-    houseId: 2,
-    title: "Longevity Research Grant",
-    description:
-      "Fund a 3-month research grant exploring the intersection of blockchain incentives and longevity science. Budget: 3,000 USDC.",
+    id: 2, houseId: 2,
+    title: "Sponsor Open-Source Raptor Engine Telemetry Library",
+    description: "Allocate 50,000 USDC to fund development of an open-source telemetry analysis toolkit for sub-orbital test data.",
     author: "0xB2C3D4E5F6071829A3b4c5D6E7F89001a2345678",
-    startTime: "2026-02-26T00:00:00Z",
-    endTime: "2026-03-06T00:00:00Z",
-    yesVotes: 10,
-    noVotes: 6,
-    status: "active",
+    startTime: "2026-04-22T00:00:00Z", endTime: "2026-04-29T00:00:00Z",
+    yesVotes: 27, noVotes: 4, status: "passed",
     voters: [
-      { address: "0xB2C3D4E5F6071829A3b4c5D6E7F89001a2345678", support: true, txHash: "0x1a0102030405060708091011121314151617181920212223242526272829abcd" },
-      { address: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567", support: true, txHash: "0x2b0203040506070809101112131415161718192021222324252627282930bcde" },
-      { address: "0xC3D4E5F60718293aB4c5D6e7F89001A23456789a", support: false, txHash: "0x3c030405060708091011121314151617181920212223242526272829303cdef0" },
-      { address: "0xD4E5F60718293Ab4C5d6E7f89001a23456789AbC", support: true, txHash: "0x4d04050607080910111213141516171819202122232425262728293031def012" },
-      { address: "0xE5F60718293aB4c5D6E7F89001A23456789aBcDe", support: false, txHash: "0x5e0506070809101112131415161718192021222324252627282930313ef01234" },
-      { address: "0xF60718293aB4c5D6E7F89001A234567890aBcDeF", support: true, txHash: "0x6f060708091011121314151617181920212223242526272829303132f0123456" },
-      { address: "0x0718293aB4c5D6E7F89001A23456789aBcDeFa12", support: true, txHash: "0x700708091011121314151617181920212223242526272829303132330123456a" },
-      { address: "0x18293aB4c5D6E7F89001A234567890aBcDeF1234", support: false, txHash: "0x81080910111213141516171819202122232425262728293031323334012345bc" },
-      { address: "0x293aB4c5D6E7F89001A2345678901aBcDeF12345", support: true, txHash: "0x920910111213141516171819202122232425262728293031323334350123abcd" },
-      { address: "0x3aB4c5D6E7F89001A2345678901AbCdEf1234567", support: false, txHash: "0xa31011121314151617181920212223242526272829303132333435360123bcde" },
-      { address: "0x4Bc5D6E7F89001A234567890aBcDeF12345678901", support: true, txHash: "0xb41112131415161718192021222324252627282930313233343536370123cdef" },
-      { address: "0x5cD6E7F89001A2345678901AbCdEf123456789012", support: true, txHash: "0xc51213141516171819202122232425262728293031323334353637380123def0" },
-      { address: "0x6dE7F89001A23456789012AbCdEf1234567890123", support: false, txHash: "0xd613141516171819202122232425262728293031323334353637383901234ef0" },
-      { address: "0x7eF89001A234567890123AbCdEf12345678901234", support: true, txHash: "0xe71415161718192021222324252627282930313233343536373839400123f012" },
-      { address: "0x8f9001A2345678901234AbCdEf123456789012345", support: true, txHash: "0xf81516171819202122232425262728293031323334353637383940410124abcd" },
-      { address: "0x90A1B2C3D4E5F607182930A1b2C3d4E5f6071829", support: false, txHash: "0x091617181920212223242526272829303132333435363738394041420124bcde" },
+      { address: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567", support: true, txHash: "0x11a2b3c4d5e6f0718293040506070809010203040506070809010203040506ab", nftTokenId: 2001 },
+      { address: "0xB2C3D4E5F6071829A3b4c5D6E7F89001a2345678", support: true, txHash: "0x22b3c4d5e6f07182930405060708090102030405060708090102030405060cd", nftTokenId: 2002 },
     ],
   },
-
-  // 7 — Sovereign Node (passed)
   {
-    id: 7,
-    houseId: 3,
-    title: "Privacy Toolkit Funding",
-    description:
-      "Allocate 4,000 USDC to develop and distribute a privacy toolkit including encrypted messaging guides, VPN recommendations, and wallet hygiene best practices.",
-    author: "0x8765FeDcBa098765432100AbCdEf1234567890aB",
-    startTime: "2026-01-15T00:00:00Z",
-    endTime: "2026-01-29T00:00:00Z",
-    yesVotes: 14,
-    noVotes: 3,
-    status: "passed",
+    id: 3, houseId: 3,
+    title: "Allocate 100k USDC to GPU Co-op for Open Llama Reproduction",
+    description: "Fund a 3-month GPU lease via the OSS AI Compute Co-op to reproduce a frontier-class open model with fully open weights and training data.",
+    author: "0x9876FeDcBa0987654321FeDcBa09876543210000",
+    startTime: "2026-04-26T00:00:00Z", endTime: "2026-05-03T00:00:00Z",
+    yesVotes: 41, noVotes: 6, status: "active",
     voters: [
-      { address: "0x8765FeDcBa098765432100AbCdEf1234567890aB", support: true, txHash: "0xf1a2b3c4d5e6f7089a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3" },
-      { address: "0x9876FeDcBa0987654321FeDcBa09876543210000", support: true, txHash: "0xf2b3c4d5e6f70809a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f" },
-      { address: "0x7654FeDcBa0987654321AbCdEf01234567890aBc", support: true, txHash: "0xf3c4d5e6f708091a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4" },
-      { address: "0x6543FeDcBa09876543210AbCdEf234567890aBcD", support: true, txHash: "0xf4d5e6f7080910a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f45" },
-      { address: "0x5432FeDcBa098765432100aBcDeF34567890AbCd", support: false, txHash: "0xf5e6f708091011a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f456" },
-      { address: "0x4321FeDcBa0987654321AbCdEf4567890aBcDeF0", support: true, txHash: "0xf6f70809101112a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f467" },
-      { address: "0x3210FeDcBa0987654321AbCdEf567890aBcDeF01", support: true, txHash: "0xf7080910111213a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f478" },
-      { address: "0x2109FeDcBa0987654321AbCdEf67890aBcDeF012", support: true, txHash: "0xf8091011121314a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f489" },
-      { address: "0x1098FeDcBa0987654321AbCdEf7890aBcDeF0123", support: true, txHash: "0xf9101112131415a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f49a" },
-      { address: "0x0987FeDcBa0987654321AbCdEf890aBcDeF01234", support: false, txHash: "0xfa111213141516a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4ab" },
-      { address: "0xF876FeDcBa0987654321AbCdEf90aBcDeF012345", support: true, txHash: "0xfb121314151617a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4bc" },
-      { address: "0xE765FeDcBa0987654321AbCdEfa0aBcDeF012346", support: true, txHash: "0xfc131415161718a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4cd" },
-      { address: "0xD654FeDcBa0987654321AbCdEfb0aBcDeF012347", support: true, txHash: "0xfd141516171819a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4de" },
-      { address: "0xC543FeDcBa0987654321AbCdEfc0aBcDeF012348", support: true, txHash: "0xfe151617181920a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4ef" },
-      { address: "0xB432FeDcBa0987654321AbCdEfd0aBcDeF012349", support: true, txHash: "0xff161718192021a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4f0" },
-      { address: "0xA321FeDcBa0987654321AbCdEfe0aBcDeF01234a", support: false, txHash: "0x00171819202122a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f401" },
-      { address: "0x9210FeDcBa0987654321AbCdEff0aBcDeF01234b", support: true, txHash: "0x01181920212223a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f412" },
+      { address: "0x9876FeDcBa0987654321FeDcBa09876543210000", support: true, txHash: "0xaa11223344556677889900aabbccddeeff00112233445566778899aabbccddee", nftTokenId: 3001 },
+      { address: "0x8765FeDcBa098765432100AbCdEf1234567890aB", support: true, txHash: "0xbb22334455667788990011aabbccddeeff112233445566778899aabbccddeeff", nftTokenId: 3002 },
     ],
   },
-
-  // 8 — Culture Lab (failed)
   {
-    id: 8,
-    houseId: 4,
-    title: "Open Mic Night Budget",
-    description:
-      "Request 500 USDC for monthly open mic nights, including streaming setup, guest speaker fees, and promotional materials.",
-    author: "0xDeAdBeEf00112233445566778899aAbBcCdDeEfF",
-    startTime: "2026-02-10T00:00:00Z",
-    endTime: "2026-02-24T00:00:00Z",
-    yesVotes: 4,
-    noVotes: 9,
-    status: "failed",
+    id: 4, houseId: 4,
+    title: "Network State Census Day — June 1, 2026",
+    description: "Approve the second annual census, requiring all members to submit cryptographic proof-of-residence and proof-of-attendance attestations.",
+    author: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf",
+    startTime: "2026-04-15T00:00:00Z", endTime: "2026-04-22T00:00:00Z",
+    yesVotes: 156, noVotes: 12, status: "passed",
     voters: [
-      { address: "0xDeAdBeEf00112233445566778899aAbBcCdDeEfF", support: true, txHash: "0xa0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90ab" },
-      { address: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf", support: false, txHash: "0xb1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abc1" },
-      { address: "0xFaCeFeed00112233445566778899AABBccDDeeFF", support: true, txHash: "0xc2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcd2" },
-      { address: "0xBaD00Dad00112233445566778899aaBBCCddEEff", support: false, txHash: "0xd3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcde3f" },
-      { address: "0xC0ffEE0000112233445566778899AaBbCcDdEeFf", support: false, txHash: "0xe4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcdef4ab" },
-      { address: "0xF00dCafe00112233445566778899AaBbCcDdEeFf", support: false, txHash: "0xf5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcdef5abcd" },
-      { address: "0xBeEfCafe00112233445566778899AaBbCcDdEeFf", support: false, txHash: "0xa6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcdef6abcde0" },
-      { address: "0xDeCaFBad00112233445566778899AaBbCcDdEeFf", support: true, txHash: "0xb7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcdef7abcdef12" },
-      { address: "0xAceBa5e000112233445566778899AaBbCcDdEeFf", support: false, txHash: "0xc8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcdef8abcdef2345" },
-      { address: "0xBa5eBa1100112233445566778899AaBbCcDdEeFf", support: false, txHash: "0xd9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcdef9abcdef345678" },
-      { address: "0xCa5caDe000112233445566778899AaBbCcDdEeFf", support: false, txHash: "0xe0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcdefa0abcdef45678901" },
-      { address: "0xDa7aBa5e00112233445566778899AaBbCcDdEeFf", support: true, txHash: "0xf1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcdefb0abcdef567890abcd" },
-      { address: "0xFa11Bac000112233445566778899AaBbCcDdEeFf", support: false, txHash: "0xa2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90abcdefc0abcdef6789012345ef" },
+      { address: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf", support: true, txHash: "0x1100aabbccddeeff00112233445566778899aabbccddeeff0011223344556677", nftTokenId: 4001 },
+      { address: "0xDeAdBeEf00112233445566778899aAbBcCdDeEfF", support: true, txHash: "0x2200bbccddeeff0011223344556677889900aabbccddeeff1122334455667788", nftTokenId: 4002 },
+    ],
+  },
+  {
+    id: 5, houseId: 1,
+    title: "Quarterly Workout Blueprint Convening — May 15",
+    description: "Reserve 8,000 USDC for the quarterly Don't Die in-person convening: workout blueprint, longevity policy group, and party dinner.",
+    author: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5",
+    startTime: "2026-04-28T00:00:00Z", endTime: "2026-05-05T00:00:00Z",
+    yesVotes: 14, noVotes: 2, status: "active",
+    voters: [
+      { address: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5", support: true, txHash: "0xab01020304050607080910111213141516171819202122232425262728293031", nftTokenId: 1101 },
+      { address: CURRENT_USER_ADDRESS, support: true, txHash: "0xbc02030405060708091011121314151617181920212223242526272829303132", nftTokenId: 1102 },
     ],
   },
 ];
 
-// -----------------------------------------------------------------------------
-// Helper Functions
-// -----------------------------------------------------------------------------
-
-export function getHouseById(id: number): House | undefined {
-  return HOUSES.find((house) => house.id === id);
+export function getPartyById(id: number): Party | undefined {
+  return PARTIES.find((p) => p.id === id);
 }
-
-export function getProposalsByHouse(houseId: number): Proposal[] {
-  return PROPOSALS.filter((proposal) => proposal.houseId === houseId);
+export function getProposalsByParty(partyId: number): Proposal[] {
+  return PROPOSALS.filter((p) => p.houseId === partyId);
 }
-
 export function getProposalById(id: number): Proposal | undefined {
-  return PROPOSALS.find((proposal) => proposal.id === id);
+  return PROPOSALS.find((p) => p.id === id);
 }
-
-// Aliases for convenience
-export const houses = HOUSES;
+export function getMembersByParty(partyId: number): Member[] {
+  return MEMBERS[partyId] ?? [];
+}
+export const getHouseById = getPartyById;
+export const getProposalsByHouse = getProposalsByParty;
+export const getMembersByHouse = getMembersByParty;
 export const proposals = PROPOSALS;
 
-export function getMembersByHouse(houseId: number): Member[] {
-  return MEMBERS[houseId] ?? [];
+export function getNFTsByAddress(address: string): IVotedNFT[] {
+  const owned: IVotedNFT[] = [];
+  for (const proposal of PROPOSALS) {
+    const party = getPartyById(proposal.houseId);
+    if (!party) continue;
+    for (const voter of proposal.voters) {
+      if (voter.address.toLowerCase() === address.toLowerCase()) {
+        owned.push({
+          tokenId: voter.nftTokenId,
+          proposalId: proposal.id,
+          proposalTitle: proposal.title,
+          partyId: party.id, partyName: party.name,
+          partyEmoji: party.emoji, partyColor: party.color,
+          support: voter.support, txHash: voter.txHash,
+          votedAt: proposal.startTime,
+        });
+      }
+    }
+  }
+  return owned.sort((a, b) => b.tokenId - a.tokenId);
+}
+
+export const NORMS: Record<number, NormsVersion[]> = {
+  1: [
+    {
+      partyId: 1, version: 1,
+      ipfsCID: "ipfs://bafyreid-dontdie-v1",
+      contentHash: "0x7e1c4f2a8b6d3e9f5a1c7b8d2e4f6a9c3b5d7e8f1a2c4d6e8f9a0b1c2d3e4f50",
+      publishedAt: "2025-09-01T00:00:00Z",
+      body: `# Don't Die Party Norms — v1\n\n1. **Blueprint adherence.** Members commit to logging at least 80% of Blueprint protocol days per quarter, verifiable via on-chain attestation.\n2. **Honest biomarkers.** All published biomarkers must be from accredited labs. Falsified data is grounds for slashing.\n3. **No closed-source supplements.** Members may not promote proprietary stacks not auditable by other members.\n4. **Mutual aid.** When a member's biomarkers regress, others have 7 days to offer support before public criticism is permitted.`,
+    },
+    {
+      partyId: 1, version: 2,
+      ipfsCID: "ipfs://bafyreid-dontdie-v2",
+      contentHash: "0xa3f2c8e1d4b7a9c5e2f6b8d3a1c7e9f0b2d4a6c8e1f3b5d7a9c0e2f4b6d8a0c2",
+      publishedAt: "2026-01-15T00:00:00Z",
+      body: `# Don't Die Party Norms — v2\n\n(v1 + the following amendments approved by member vote on 2026-01-12.)\n\n5. **Mandatory annual physical.** Members submit a comprehensive annual physical attestation hash by their joining anniversary.\n6. **No anti-aging snake oil.** Promoting unproven anti-aging supplements (no published trial data) is a violation.`,
+    },
+  ],
+  2: [
+    {
+      partyId: 2, version: 1,
+      ipfsCID: "ipfs://bafyreid-mars-v1",
+      contentHash: "0xb2e4c6a8d1f3b5e7c9a2d4f6b8e0c2a4d6f8b0e2c4a6d8f0b2e4c6a8d0f2e4c6",
+      publishedAt: "2025-07-04T00:00:00Z",
+      body: `# Mars Party Norms — v1\n\n1. **Mission first.** No party action may compromise launch-window safety.\n2. **Open telemetry.** All party-funded engineering data must be published within 90 days.\n3. **No suborbital tourism marketing.** Mars is the goal; tourism is a distraction.\n4. **In-person quarterly review.** Members commit to attending at least one in-person Mars Party convening per year.`,
+    },
+  ],
+  3: [
+    {
+      partyId: 3, version: 1,
+      ipfsCID: "ipfs://bafyreid-ossai-v1",
+      contentHash: "0xc3d5e7f9a1c3b5d7e9c1a3f5d7b9c1e3a5d7f9b1c3e5a7d9b1f3e5c7a9d1f3e5",
+      publishedAt: "2025-05-15T00:00:00Z",
+      body: `# Open-Source AI Party Norms — v1\n\n1. **Open weights, full stop.** Any model trained with party funds must publish its weights and training data within 30 days of training completion.\n2. **No closed-source contributions during cabinet seats.** Cabinet members may not work on closed AI products during their tenure.\n3. **Reproducibility.** All published evals must include a reproducible harness in the party's open-eval repo.\n4. **No hype.** Public communications must avoid unsubstantiated capability claims about funded models.`,
+    },
+  ],
+  4: [
+    {
+      partyId: 4, version: 1,
+      ipfsCID: "ipfs://bafyreid-ns-v1",
+      contentHash: "0xd4e6f8a0c2d4e6f8a0c2d4e6f8a0c2d4e6f8a0c2d4e6f8a0c2d4e6f8a0c2d4e6",
+      publishedAt: "2025-04-20T00:00:00Z",
+      body: `# Network State Party Norms — v1\n\n1. **Census participation.** Members must attest at least once per annual census window or lose voting rights for the year.\n2. **No sybil.** One wallet, one vote. Members caught operating multiple identities are immediately ejected.\n3. **Diplomatic neutrality.** Members do not endorse or attack other parties as Network State Party representatives without cabinet authorization.\n4. **Cloud-first commits.** Network State infrastructure contributions are open-source by default.`,
+    },
+  ],
+};
+
+export function getNormsForParty(partyId: number): NormsVersion[] {
+  return NORMS[partyId] ?? [];
+}
+export function getCurrentNorms(partyId: number): NormsVersion | undefined {
+  const versions = NORMS[partyId];
+  return versions ? versions[versions.length - 1] : undefined;
+}
+
+export const ELECTIONS: ElectionRace[] = [
+  {
+    raceId: 1, partyId: 2,
+    startTime: "2026-04-25T00:00:00Z", endTime: "2026-05-09T00:00:00Z",
+    finalized: false,
+    candidates: [
+      { address: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567", voteCount: 4218, manifesto: "Continue the current trajectory: open telemetry, quarterly conventions, no suborbital distractions. Year 2 of the 5-year Mars-or-bust plan." },
+      { address: "0xC3D4E5F60718293aB4c5D6e7F89001A23456789a", voteCount: 3104, manifesto: "Triple the engineering grant program. Open junior chapters in 50 cities. We need talent at the bottom of the funnel — not just at SpaceX." },
+    ],
+  },
+  {
+    raceId: 2, partyId: 1,
+    startTime: "2026-01-01T00:00:00Z", endTime: "2026-01-15T00:00:00Z",
+    finalized: true, winner: "0x1234567890aBcDeF1234567890AbCdEf12345678",
+    candidates: [
+      { address: "0x1234567890aBcDeF1234567890AbCdEf12345678", voteCount: 11200, manifesto: "Re-elect for term 2. Blueprint expansion + biomarker open-source." },
+      { address: "0x5A6B7C8D9E0F1A2B3C4D5a6b7C8d9E0f1A2b3C4D", voteCount: 2239, manifesto: "Slow the pace. Focus on member retention over recruitment." },
+    ],
+  },
+];
+
+export function getActiveElection(partyId: number): ElectionRace | undefined {
+  return ELECTIONS.find((e) => e.partyId === partyId && !e.finalized);
+}
+export function getElectionsForParty(partyId: number): ElectionRace[] {
+  return ELECTIONS.filter((e) => e.partyId === partyId);
+}
+
+export const PARTY_EVENTS: PartyEvent[] = [
+  { id: 1, partyId: 1, title: "Quarterly Workout Blueprint Convening", description: "Workout, longevity policy roundtable, and party dinner.", location: "Singapore — Network School Campus", startTime: "2026-05-15T18:00:00Z", rsvpCount: 187, attended: 0, isOnline: false },
+  { id: 2, partyId: 2, title: "Boca Chica Launch Watch Party", description: "Members-only watch with live commentary from cabinet engineers.", location: "Boca Chica, TX", startTime: "2026-05-20T12:00:00Z", rsvpCount: 412, attended: 0, isOnline: false },
+  { id: 3, partyId: 3, title: "Open Llama Reproduction Office Hours", description: "Live coding session with the GPU co-op stewards.", location: "Online — Zoom + onchain attestation", startTime: "2026-05-08T17:00:00Z", rsvpCount: 89, attended: 0, isOnline: true },
+  { id: 4, partyId: 4, title: "Network State Census Day", description: "Submit cryptographic proof-of-residence and proof-of-attendance attestations.", location: "Worldwide — coordinated 24h window", startTime: "2026-06-01T00:00:00Z", rsvpCount: 8421, attended: 0, isOnline: true },
+];
+
+export function getEventsForParty(partyId: number): PartyEvent[] {
+  return PARTY_EVENTS.filter((e) => e.partyId === partyId);
+}
+export function getUpcomingEvents(): PartyEvent[] {
+  const now = Date.now();
+  return PARTY_EVENTS.filter((e) => new Date(e.startTime).getTime() > now)
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+}
+
+export const DISPUTES: Dispute[] = [
+  { id: 1, partyId: 3, complainant: "0x9876FeDcBa0987654321FeDcBa09876543210000", defendant: "0x6543FeDcBa09876543210AbCdEf234567890aBcD", normVersion: 1, evidence: "Defendant published a closed-weights model trained partially with party-funded GPU credits.", status: "pending", filedAt: "2026-04-26T11:00:00Z" },
+  { id: 2, partyId: 1, complainant: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5", defendant: "0x7E8F9A0B1C2D3E4F5A6B7e8f9A0b1C2d3E4f5A6B", normVersion: 2, evidence: "Defendant promoted an unproven proprietary supplement on a public livestream while wearing party-branded apparel.", status: "slash", filedAt: "2026-03-12T09:30:00Z", resolvedAt: "2026-03-19T16:00:00Z", resolutionNote: "Verdict: Slash 50 USDC. Public retraction required within 7 days. Repeat offense triggers Eject." },
+];
+
+export function getDisputesForParty(partyId: number): Dispute[] {
+  return DISPUTES.filter((d) => d.partyId === partyId);
+}
+
+const SYNTHETIC_JOINS = [
+  { partyId: 4, address: "0xCa5caDe000112233445566778899AaBbCcDdEeFf", at: "2026-04-30T13:42:00Z", txHash: "0xfeed01" },
+  { partyId: 3, address: "0xBaD00Dad00112233445566778899aaBBCCddEEff", at: "2026-04-30T12:08:00Z", txHash: "0xfeed02" },
+  { partyId: 1, address: "0xC0ffEE0000112233445566778899AaBbCcDdEeFf", at: "2026-04-30T11:45:00Z", txHash: "0xfeed03" },
+  { partyId: 2, address: "0x1098FeDcBa0987654321AbCdEf7890aBcDeF0123", at: "2026-04-30T10:22:00Z", txHash: "0xfeed04" },
+  { partyId: 4, address: "0x4321FeDcBa0987654321AbCdEf4567890aBcDeF0", at: "2026-04-30T09:11:00Z", txHash: "0xfeed05" },
+];
+
+export function getStreamingFeed(limit = 40): FeedItem[] {
+  const items: FeedItem[] = [];
+  for (const p of PROPOSALS) {
+    for (const v of p.voters) {
+      items.push({
+        id: `vote-${p.id}-${v.address}`, kind: "vote",
+        partyId: p.houseId, actor: v.address,
+        timestamp: p.startTime, txHash: v.txHash,
+        payload: { proposalId: p.id, proposalTitle: p.title, support: v.support, nftTokenId: v.nftTokenId },
+      });
+    }
+  }
+  for (const j of SYNTHETIC_JOINS) {
+    items.push({ id: `join-${j.partyId}-${j.address}`, kind: "join", partyId: j.partyId, actor: j.address, timestamp: j.at, txHash: j.txHash, payload: {} });
+  }
+  for (const p of PROPOSALS) {
+    items.push({ id: `proposal-${p.id}`, kind: "proposal", partyId: p.houseId, actor: p.author, timestamp: p.startTime, payload: { proposalId: p.id, proposalTitle: p.title } });
+  }
+  for (const e of ELECTIONS) {
+    items.push({ id: `election-${e.raceId}-start`, kind: "election", partyId: e.partyId, actor: "0x0000000000000000000000000000000000000000", timestamp: e.startTime, payload: { raceId: e.raceId, candidates: e.candidates.length, finalized: e.finalized } });
+  }
+  for (const p of PARTIES) {
+    items.push({ id: `found-${p.id}`, kind: "found", partyId: p.id, actor: p.president, timestamp: p.foundedAt, payload: { name: p.name } });
+  }
+  items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return items.slice(0, limit);
+}
+
+export function getUserGrants(address: string): UserGrant[] {
+  if (address.toLowerCase() === DEMO_USER_ADDRESS.toLowerCase()) {
+    return DEMO_USER_GRANTS;
+  }
+  return [];
+}
+export function isUserMember(address: string, partyId: number): boolean {
+  return getUserGrants(address).some((g) => g.partyId === partyId);
+}
+
+export function getTotalOnchainVotes(): number {
+  return PROPOSALS.reduce((sum, p) => sum + p.yesVotes + p.noVotes, 0);
+}
+export function getTotalMembers(): number {
+  return PARTIES.reduce((sum, p) => sum + p.memberCount, 0);
+}
+export function getTotalTreasury(): number {
+  return PARTIES.reduce((sum, p) => sum + p.treasuryBalance, 0);
+}
+
+// -----------------------------------------------------------------------------
+// Party social meta (Twitter/Farcaster-style profile + slate)
+// -----------------------------------------------------------------------------
+
+export const PARTY_SOCIAL: Record<number, PartySocialMeta> = {
+  1: {
+    presidentName: "Bryan Johnson",
+    presidentHandle: "bryan_johnson",
+    presidentVerified: true,
+    bio: "I founded the Don't Die Party to literally end death. Our 13,439 members follow the Blueprint protocol and advocate for faster cures. Apply if you want to join!",
+    slate: [
+      { address: "0x1234567890aBcDeF1234567890AbCdEf12345678", name: "Bryan Johnson", handle: "bryan_johnson", role: "President" },
+      { address: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5", name: "Anna Nguyen", handle: "anna_ng", role: "VP" },
+      { address: "0x3F4E5D6C7B8A90010203F4e5D6c7B8a900102030", name: "Jay Park", handle: "jay_park", role: "Treasurer" },
+    ],
+    socialProofNames: ["James Smith", "Kelly Lu", "Rohit Singh"],
+    fundingGoalUSDC: 1_000_000,
+    fundingRaisedUSDC: 330_000,
+  },
+  2: {
+    presidentName: "Elon Musk",
+    presidentHandle: "elonmusk",
+    presidentVerified: true,
+    bio: "Make humanity multiplanetary. Mars Party members fund open-source rocketry, junior chapters in 50 cities, and refuse the suborbital tourism distraction. Year 2 of the 5-year plan.",
+    slate: [
+      { address: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567", name: "Elon Musk", handle: "elonmusk", role: "President" },
+      { address: "0xB2C3D4E5F6071829A3b4c5D6E7F89001a2345678", name: "Tom Mueller", handle: "tom_mueller", role: "Cabinet" },
+      { address: "0xC3D4E5F60718293aB4c5D6e7F89001A23456789a", name: "Gwynne S.", handle: "gwynnes", role: "Treasurer" },
+    ],
+    socialProofNames: ["Tim Dodd", "Felix Schlang", "Marcus House"],
+    fundingGoalUSDC: 2_000_000,
+    fundingRaisedUSDC: 920_000,
+  },
+  3: {
+    presidentName: "Daniel Gross",
+    presidentHandle: "danielgross",
+    presidentVerified: true,
+    bio: "Models should be open. Weights should be free. We fund GPU collectives, open-eval infrastructure, and any model trained with party funds publishes weights within 30 days.",
+    slate: [
+      { address: "0x9876FeDcBa0987654321FeDcBa09876543210000", name: "Daniel Gross", handle: "danielgross", role: "President" },
+      { address: "0x8765FeDcBa098765432100AbCdEf1234567890aB", name: "Nat Friedman", handle: "natfriedman", role: "VP" },
+      { address: "0x7654FeDcBa0987654321AbCdEf01234567890aBc", name: "Soumith C.", handle: "soumithchintala", role: "Cabinet" },
+    ],
+    socialProofNames: ["Andrej K.", "Jeremy Howard", "Tri Dao"],
+    fundingGoalUSDC: 750_000,
+    fundingRaisedUSDC: 310_000,
+  },
+  4: {
+    presidentName: "Balaji Srinivasan",
+    presidentHandle: "balajis",
+    presidentVerified: true,
+    bio: "Cloud-first nation, land-second. Network State Party members coordinate offline meetups, fund census infrastructure, and vote in censorship-resistant elections. The end-party system starts here.",
+    slate: [
+      { address: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf", name: "Balaji Srinivasan", handle: "balajis", role: "President" },
+      { address: "0xDeAdBeEf00112233445566778899aAbBcCdDeEfF", name: "Lulu Cheng", handle: "lulumeservey", role: "VP" },
+      { address: "0xFaCeFeed00112233445566778899AABBccDDeeFF", name: "Niraj Pant", handle: "niraj", role: "Treasurer" },
+    ],
+    socialProofNames: ["Jakub", "Vivek W.", "Pranay K."],
+    fundingGoalUSDC: 3_000_000,
+    fundingRaisedUSDC: 1_240_000,
+  },
+};
+
+export function getPartySocial(partyId: number): PartySocialMeta | undefined {
+  return PARTY_SOCIAL[partyId];
+}
+
+// -----------------------------------------------------------------------------
+// Posts (Twitter / Farcaster style)
+// -----------------------------------------------------------------------------
+
+export const POSTS: PartyPost[] = [
+  {
+    id: 1, partyId: 1,
+    author: "0x1234567890aBcDeF1234567890AbCdEf12345678",
+    authorName: "Bryan Johnson",
+    authorHandle: "bryan_johnson",
+    authorVerified: true,
+    body: "Allulose — a sugar alternative — reduces post-meal blood glucose and fat accumulation. Randomized controlled trials show its positive effects on plasma glucose, insulin release, and weight loss in healthy individuals.",
+    createdAt: "2026-04-30T14:00:00Z",
+    replies: 1100, recasts: 349, likes: 9200,
+  },
+  {
+    id: 2, partyId: 1,
+    author: "0x1234567890aBcDeF1234567890AbCdEf12345678",
+    authorName: "Bryan Johnson",
+    authorHandle: "bryan_johnson",
+    authorVerified: true,
+    body: "MRI images and gross pathology of abdominal visceral fat deposits of mice are presented in this study. Eight weeks of supplementation reduced visceral fat by 40% in the treatment group. Public dataset available on the party repo.",
+    createdAt: "2026-04-29T09:15:00Z",
+    replies: 412, recasts: 188, likes: 4400,
+  },
+  {
+    id: 3, partyId: 1,
+    author: "0x2B3C4D5E6F708192A3b4C5d6E7F80910a2B3c4D5",
+    authorName: "Anna Nguyen",
+    authorHandle: "anna_ng",
+    body: "Just finalized this quarter's Blueprint convening venue: Network School Singapore campus, May 15. Cabinet treasurer's reserve covers food + transport. RSVP onchain to mint your proof-of-attendance NFT.",
+    createdAt: "2026-04-28T17:30:00Z",
+    replies: 88, recasts: 124, likes: 1800,
+  },
+  {
+    id: 4, partyId: 2,
+    author: "0xA1B2C3D4E5F60718293a4b5c6D7E8F9001234567",
+    authorName: "Elon Musk",
+    authorHandle: "elonmusk",
+    authorVerified: true,
+    body: "Mars Party Junior chapter in Boca Chica is live. 50 kids building model rockets every Saturday. Funded by member dues, ran by cabinet engineers on weekends. Multiplanetary doesn't ship itself.",
+    createdAt: "2026-04-30T08:00:00Z",
+    replies: 2100, recasts: 5300, likes: 31000,
+  },
+  {
+    id: 5, partyId: 2,
+    author: "0xB2C3D4E5F6071829A3b4c5D6E7F89001a2345678",
+    authorName: "Tom Mueller",
+    authorHandle: "tom_mueller",
+    body: "Open-source Raptor telemetry library v0.1 is shipping next week. Contribute via the party's GitHub or attend office hours during the Boca Chica launch watch party (May 20).",
+    createdAt: "2026-04-29T11:00:00Z",
+    replies: 240, recasts: 410, likes: 3600,
+  },
+  {
+    id: 6, partyId: 3,
+    author: "0x9876FeDcBa0987654321FeDcBa09876543210000",
+    authorName: "Daniel Gross",
+    authorHandle: "danielgross",
+    authorVerified: true,
+    body: "100k USDC proposal to lease GPU time for an Open-Llama reproduction is now streaming. 41 yes / 6 no with 5 days left. Vote with your wallet — or your delegated bps if you've granted them. Provably bounded, fully open weights.",
+    createdAt: "2026-04-30T10:30:00Z",
+    replies: 312, recasts: 540, likes: 4200,
+  },
+  {
+    id: 7, partyId: 3,
+    author: "0x8765FeDcBa098765432100AbCdEf1234567890aB",
+    authorName: "Nat Friedman",
+    authorHandle: "natfriedman",
+    body: "Open-eval harness v2 published. Anyone can submit attested benchmark scores on-chain via the Census contract. Cheating costs you a slash + dispute.",
+    createdAt: "2026-04-27T19:00:00Z",
+    replies: 95, recasts: 220, likes: 2100,
+  },
+  {
+    id: 8, partyId: 4,
+    author: "0xCaFeBaBe00112233445566778899AaBbCcDdEeFf",
+    authorName: "Balaji Srinivasan",
+    authorHandle: "balajis",
+    authorVerified: true,
+    body: "We just crossed 21,000 census-attested members. The Network State Party is now larger by attested headcount than several UN-recognized microstates. Onchain wins.",
+    createdAt: "2026-04-30T12:30:00Z",
+    replies: 1800, recasts: 4100, likes: 18000,
+  },
+  {
+    id: 9, partyId: 4,
+    author: "0xDeAdBeEf00112233445566778899aAbBcCdDeEfF",
+    authorName: "Lulu Cheng",
+    authorHandle: "lulumeservey",
+    body: "Próspera embassy proposal at 89/22. Diplomatic neutrality is a hard norm — no party content from the embassy without cabinet sign-off. Vote streams onchain.",
+    createdAt: "2026-04-29T08:45:00Z",
+    replies: 280, recasts: 510, likes: 3200,
+  },
+];
+
+export function getPostsForParty(partyId: number): PartyPost[] {
+  return POSTS.filter((p) => p.partyId === partyId).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 }

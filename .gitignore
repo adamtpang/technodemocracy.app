@@ -38,3 +38,10 @@ next-env.d.ts
 contracts/cache
 contracts/artifacts
 contracts/typechain-types
+
+.vercel
+
+# Claude Code worktrees (may contain API keys in settings.local.json)
+.claude/worktrees/
+.claude/settings.local.json
+.claude/settings.local.json*
