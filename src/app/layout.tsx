@@ -4,13 +4,14 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { PostHogProvider } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Houses — Technodemocracy",
+  title: "Technodemocracy — magical internet votes",
   description:
-    "Digital political parties for Network School. Connect, join, vote, govern.",
+    "From the financial crisis of 2008 to the political crisis of 2024. Join a digital party. Grant a binding franchise. Vote onchain.",
 };
 
 export default function RootLayout({
@@ -21,13 +22,15 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
-        <Providers>
-          <div className="relative flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
-        </Providers>
+        <PostHogProvider>
+          <Providers>
+            <div className="relative flex min-h-screen flex-col">
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+          </Providers>
+        </PostHogProvider>
       </body>
     </html>
   );

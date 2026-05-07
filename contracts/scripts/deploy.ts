@@ -2,138 +2,169 @@ import { ethers, network } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
 
-// Real USDC address on Base mainnet
 const BASE_MAINNET_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
-// Default stake: 10 USDC (6 decimals)
-const STAKE_AMOUNT = 10n * 10n ** 6n;
-
-// The four default houses
-const DEFAULT_HOUSES = [
+const SEED_PARTIES = [
   {
-    name: "House of Science & Technology",
+    name: "Don't Die Party",
     description:
-      "Focused on scientific research, technological innovation, and evidence-based policy.",
+      "Founded by Bryan Johnson. Optimize the body, defeat aging, refuse death.",
+    metadataCID: "ipfs://placeholder-dont-die",
   },
   {
-    name: "House of Economy & Finance",
+    name: "Mars Party",
     description:
-      "Focused on economic policy, fiscal responsibility, and financial systems.",
+      "Make humanity multiplanetary. Members commit time and capital to advancing space technology.",
+    metadataCID: "ipfs://placeholder-mars",
   },
   {
-    name: "House of Society & Culture",
+    name: "Open-Source AI Party",
     description:
-      "Focused on social welfare, cultural preservation, education, and public health.",
+      "Models should be open. Weights should be free. Members fund OSS model training.",
+    metadataCID: "ipfs://placeholder-oss-ai",
   },
   {
-    name: "House of Environment & Infrastructure",
+    name: "Network State Party",
     description:
-      "Focused on environmental protection, sustainable development, and public infrastructure.",
+      "Build the cloud-first, land-second nation. Coordinate offline meetups, vote in censorship-resistant elections.",
+    metadataCID: "ipfs://placeholder-network-state",
   },
 ];
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with account:", deployer.address);
+  console.log("Deploying with account:", deployer.address);
   console.log(
-    "Account balance:",
+    "Balance:",
     ethers.formatEther(await ethers.provider.getBalance(deployer.address)),
-    "ETH"
+    "ETH\n"
   );
 
-  // ---------------------------------------------------------------
-  // 1. USDC — deploy mock on testnets, use real on mainnet
-  // ---------------------------------------------------------------
-  let usdcAddress: string;
-
+  let usdc: string;
   if (network.name === "base") {
-    usdcAddress = BASE_MAINNET_USDC;
-    console.log("Using real USDC on Base mainnet:", usdcAddress);
+    usdc = BASE_MAINNET_USDC;
+    console.log("USDC: real on Base mainnet:", usdc);
   } else {
-    const MockUSDC = await ethers.getContractFactory("MockUSDC");
-    const mockUsdc = await MockUSDC.deploy();
-    await mockUsdc.waitForDeployment();
-    usdcAddress = await mockUsdc.getAddress();
-    console.log("MockUSDC deployed to:", usdcAddress);
+    const Mock = await ethers.getContractFactory("MockUSDC");
+    const m = await Mock.deploy();
+    await m.waitForDeployment();
+    usdc = await m.getAddress();
+    console.log("USDC: MockUSDC deployed to", usdc);
   }
 
-  // ---------------------------------------------------------------
-  // 2. HouseRegistry
-  // ---------------------------------------------------------------
-  const HouseRegistry = await ethers.getContractFactory("HouseRegistry");
-  const registry = await HouseRegistry.deploy(usdcAddress, STAKE_AMOUNT);
-  await registry.waitForDeployment();
-  const registryAddress = await registry.getAddress();
-  console.log("HouseRegistry deployed to:", registryAddress);
+  const PR = await ethers.getContractFactory("PartyRegistry");
+  const pr = await PR.deploy();
+  await pr.waitForDeployment();
+  const partyRegistry = await pr.getAddress();
+  console.log("PartyRegistry:", partyRegistry);
 
-  // ---------------------------------------------------------------
-  // 3. HouseVoting
-  // ---------------------------------------------------------------
-  const HouseVoting = await ethers.getContractFactory("HouseVoting");
-  const voting = await HouseVoting.deploy(registryAddress);
-  await voting.waitForDeployment();
-  const votingAddress = await voting.getAddress();
-  console.log("HouseVoting deployed to:", votingAddress);
+  const NR = await ethers.getContractFactory("NormsRegistry");
+  const nr = await NR.deploy(partyRegistry);
+  await nr.waitForDeployment();
+  const normsRegistry = await nr.getAddress();
+  console.log("NormsRegistry:", normsRegistry);
 
-  // ---------------------------------------------------------------
-  // 4. HouseTreasury
-  // ---------------------------------------------------------------
-  const HouseTreasury = await ethers.getContractFactory("HouseTreasury");
-  const treasury = await HouseTreasury.deploy(
-    registryAddress,
-    votingAddress,
-    usdcAddress
-  );
-  await treasury.waitForDeployment();
-  const treasuryAddress = await treasury.getAddress();
-  console.log("HouseTreasury deployed to:", treasuryAddress);
+  const MN = await ethers.getContractFactory("MembershipNFT");
+  const mn = await MN.deploy(partyRegistry);
+  await mn.waitForDeployment();
+  const membershipNFT = await mn.getAddress();
+  console.log("MembershipNFT:", membershipNFT);
 
-  // ---------------------------------------------------------------
-  // 5. Authorize HouseTreasury as a proposal creator in HouseVoting
-  // ---------------------------------------------------------------
-  const authTx = await voting.setAuthorizedCaller(treasuryAddress, true);
-  await authTx.wait();
-  console.log("HouseTreasury authorized as proposal creator in HouseVoting");
+  const FR = await ethers.getContractFactory("Franchise");
+  const fr = await FR.deploy(partyRegistry, membershipNFT, normsRegistry, usdc);
+  await fr.waitForDeployment();
+  const franchise = await fr.getAddress();
+  console.log("Franchise:", franchise);
 
-  // ---------------------------------------------------------------
-  // 6. Create default houses
-  // ---------------------------------------------------------------
-  console.log("\nCreating default houses...");
-  for (const house of DEFAULT_HOUSES) {
-    const tx = await registry.createHouse(house.name, house.description);
+  await (await mn.setFranchise(franchise)).wait();
+
+  const CB = await ethers.getContractFactory("Cabinet");
+  const cb = await CB.deploy(partyRegistry);
+  await cb.waitForDeployment();
+  const cabinet = await cb.getAddress();
+  console.log("Cabinet:", cabinet);
+
+  const DR = await ethers.getContractFactory("DisputeResolver");
+  const dr = await DR.deploy(partyRegistry, cabinet, membershipNFT, normsRegistry);
+  await dr.waitForDeployment();
+  const disputeResolver = await dr.getAddress();
+  console.log("DisputeResolver:", disputeResolver);
+
+  await (await fr.setDisputeResolver(disputeResolver)).wait();
+
+  const IV = await ethers.getContractFactory("IVotedNFT");
+  const iv = await IV.deploy();
+  await iv.waitForDeployment();
+  const ivotedNFT = await iv.getAddress();
+  console.log("IVotedNFT:", ivotedNFT);
+
+  const VT = await ethers.getContractFactory("Voting");
+  const vt = await VT.deploy(partyRegistry, membershipNFT, franchise);
+  await vt.waitForDeployment();
+  const voting = await vt.getAddress();
+  console.log("Voting:", voting);
+
+  await (await vt.setIVotedNFT(ivotedNFT)).wait();
+  await (await iv.setMinter(voting)).wait();
+
+  const EL = await ethers.getContractFactory("Election");
+  const el = await EL.deploy(partyRegistry, membershipNFT, cabinet);
+  await el.waitForDeployment();
+  const election = await el.getAddress();
+  console.log("Election:", election);
+
+  await (await pr.setElectionContract(election)).wait();
+
+  const TR = await ethers.getContractFactory("Treasury");
+  const tr = await TR.deploy(partyRegistry, membershipNFT, cabinet, voting, usdc);
+  await tr.waitForDeployment();
+  const treasury = await tr.getAddress();
+  console.log("Treasury:", treasury);
+
+  await (await vt.setAuthorizedCaller(treasury, true)).wait();
+
+  const CN = await ethers.getContractFactory("Census");
+  const cn = await CN.deploy(partyRegistry, membershipNFT, cabinet);
+  await cn.waitForDeployment();
+  const census = await cn.getAddress();
+  console.log("Census:", census);
+
+  const AG = await ethers.getContractFactory("AccessGate");
+  const ag = await AG.deploy(partyRegistry, membershipNFT, cabinet, census);
+  await ag.waitForDeployment();
+  const accessGate = await ag.getAddress();
+  console.log("AccessGate:", accessGate);
+
+  console.log("\nSeeding Balaji's example parties...");
+  for (const p of SEED_PARTIES) {
+    const tx = await pr.createParty(p.name, p.description, p.metadataCID);
     await tx.wait();
-    console.log(`  Created: ${house.name}`);
+    console.log(`  Founded: ${p.name}`);
   }
 
-  // ---------------------------------------------------------------
-  // 7. Write deployed addresses to JSON
-  // ---------------------------------------------------------------
   const addresses = {
     network: network.name,
     chainId: (await ethers.provider.getNetwork()).chainId.toString(),
     deployer: deployer.address,
     contracts: {
-      usdc: usdcAddress,
-      houseRegistry: registryAddress,
-      houseVoting: votingAddress,
-      houseTreasury: treasuryAddress,
+      usdc, partyRegistry, normsRegistry, membershipNFT, franchise, cabinet,
+      disputeResolver, ivotedNFT, voting, election, treasury, census, accessGate,
     },
     deployedAt: new Date().toISOString(),
   };
 
-  const outputPath = path.join(__dirname, "..", "deployed-addresses.json");
-  fs.writeFileSync(outputPath, JSON.stringify(addresses, null, 2));
-  console.log(`\nAddresses written to ${outputPath}`);
+  const out = path.join(__dirname, "..", "deployed-addresses.json");
+  fs.writeFileSync(out, JSON.stringify(addresses, null, 2));
+  console.log(`\nAddresses written to ${out}`);
 
-  console.log("\n--- Deployment Summary ---");
-  console.log(`  USDC:           ${usdcAddress}`);
-  console.log(`  HouseRegistry:  ${registryAddress}`);
-  console.log(`  HouseVoting:    ${votingAddress}`);
-  console.log(`  HouseTreasury:  ${treasuryAddress}`);
-  console.log("--------------------------\n");
+  console.log("\n========== Deployment Summary ==========");
+  for (const [k, v] of Object.entries(addresses.contracts)) {
+    console.log(`  ${k.padEnd(18)} ${v}`);
+  }
+  console.log("========================================\n");
 }
 
-main().catch((error) => {
-  console.error(error);
+main().catch((e) => {
+  console.error(e);
   process.exitCode = 1;
 });
