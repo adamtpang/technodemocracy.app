@@ -2,46 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Technodemocracy design system.
+  Bold cobalt blue + premium near-black, modeled on Balaji's keynote slides:
+  deep navy canvas, electric-blue brand, crisp white type, subtle blue glow.
+  Brand blue: #1B5CFF  (hsl 224 100% 55%)
+*/
+
 @layer base {
   :root {
+    /* Light surfaces (used by the OAuth-style Apply consent + cards) */
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --foreground: 224 47% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.625rem;
+    --card-foreground: 224 47% 8%;
+    --primary: 224 100% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 224 35% 96%;
+    --secondary-foreground: 224 47% 12%;
+    --muted: 224 35% 96%;
+    --muted-foreground: 224 16% 42%;
+    --accent: 224 100% 96%;
+    --accent-foreground: 224 100% 40%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 224 32% 90%;
+    --input: 224 32% 90%;
+    --ring: 224 100% 55%;
+    --brand: 224 100% 55%;
+    --brand-foreground: 0 0% 100%;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    /* Premium near-black with a cobalt tint */
+    --background: 224 60% 4%;
+    --foreground: 210 40% 98%;
+    --card: 224 47% 7%;
+    --card-foreground: 210 40% 98%;
+    --primary: 224 100% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 224 38% 13%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 224 34% 12%;
+    --muted-foreground: 220 18% 62%;
+    --accent: 224 70% 16%;
+    --accent-foreground: 210 100% 92%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 224 32% 16%;
+    --input: 224 32% 18%;
+    --ring: 224 100% 62%;
+    --brand: 224 100% 62%;
+    --brand-foreground: 0 0% 100%;
   }
 }
 
@@ -52,5 +65,52 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Premium ambient blue glow, keynote-style */
+    background-image:
+      radial-gradient(
+        60rem 40rem at 50% -10%,
+        hsl(224 100% 55% / 0.16),
+        transparent 60%
+      ),
+      radial-gradient(
+        50rem 40rem at 100% 0%,
+        hsl(224 100% 50% / 0.08),
+        transparent 55%
+      );
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  /* Bold gradient text for hero headlines */
+  .text-gradient-brand {
+    background: linear-gradient(
+      100deg,
+      hsl(224 100% 72%),
+      hsl(224 100% 58%) 55%,
+      hsl(214 100% 64%)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Premium brand-blue glow on key CTAs / cards */
+  .glow-brand {
+    box-shadow:
+      0 0 0 1px hsl(224 100% 62% / 0.35),
+      0 12px 40px -12px hsl(224 100% 55% / 0.55);
+  }
+
+  .ring-brand {
+    box-shadow: 0 0 0 1px hsl(224 100% 62% / 0.4);
+  }
+
+  /* Subtle grid texture for hero bands */
+  .bg-grid {
+    background-image:
+      linear-gradient(hsl(224 40% 50% / 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(224 40% 50% / 0.06) 1px, transparent 1px);
+    background-size: 56px 56px;
   }
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
@@ -12,6 +12,25 @@ export const metadata: Metadata = {
   title: "Technodemocracy — magical internet votes",
   description:
     "From the financial crisis of 2008 to the political crisis of 2024. Join a digital party. Grant a binding franchise. Vote onchain.",
+  openGraph: {
+    title: "Technodemocracy",
+    description: "Magical internet votes. Join a digital party. Vote onchain.",
+    url: "https://technodemocracy.app",
+    siteName: "Technodemocracy",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Technodemocracy — magical internet votes",
+    description:
+      "Join a digital party. Grant a binding franchise. Vote onchain.",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1B5CFF",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
