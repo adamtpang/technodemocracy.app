@@ -19,28 +19,30 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col items-center">
-      <section className="w-full py-24 md:py-32 lg:py-40">
-        <div className="container mx-auto px-4 flex flex-col items-center text-center gap-8">
-          <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground">
+      <section className="w-full py-24 md:py-32 lg:py-40 relative bg-grid">
+        <div className="container mx-auto px-4 flex flex-col items-center text-center gap-8 relative">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3.5 py-1 text-xs text-primary backdrop-blur-sm">
             <Sparkles className="h-3 w-3" />
             From magical internet money to magical internet votes.
           </div>
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight max-w-4xl">
-            Technodemocracy
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tighter max-w-4xl leading-[0.95]">
+            <span className="text-gradient-brand">Technodemocracy</span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed">
             The financial crisis of 2008 motivated cryptocurrency. The political
             crisis of 2024 motivates technodemocracy. Join a digital party,
             grant a binding franchise, vote onchain.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link href="/parties">
-              <Button size="lg" className="gap-2">
+              <Button size="lg" className="gap-2 rounded-full px-7 glow-brand">
                 Browse Parties <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link href="/parties/new">
-              <Button size="lg" variant="outline">Start Your Own Party</Button>
+              <Button size="lg" variant="outline" className="rounded-full px-7">
+                Start Your Own Party
+              </Button>
             </Link>
           </div>
           <p className="text-xs text-muted-foreground max-w-md">

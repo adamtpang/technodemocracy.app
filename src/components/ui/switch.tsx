@@ -19,7 +19,7 @@ export function Switch({
   disabled,
   className,
   id,
-  activeColor = "#3b82f6",
+  activeColor = "#1B5CFF",
 }: SwitchProps) {
   return (
     <button
