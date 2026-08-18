@@ -8,14 +8,43 @@ import { PostHogProvider } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
+const SITE_URL = "https://technodemocracy.app";
+
+const organizationJsonLd = {
+  "@type": "Organization",
+  "@id": `${SITE_URL}/#organization`,
+  name: "Technodemocracy",
+  url: SITE_URL,
+  sameAs: ["https://github.com/adamtpang/technodemocracy.app"],
+};
+
+const websiteJsonLd = {
+  "@type": "WebSite",
+  "@id": `${SITE_URL}/#website`,
+  url: SITE_URL,
+  name: "Technodemocracy",
+  description:
+    "From the financial crisis of 2008 to the political crisis of 2024. Join a digital party. Grant a binding franchise. Vote onchain.",
+  publisher: { "@id": `${SITE_URL}/#organization` },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [organizationJsonLd, websiteJsonLd],
+};
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Technodemocracy — magical internet votes",
   description:
     "From the financial crisis of 2008 to the political crisis of 2024. Join a digital party. Grant a binding franchise. Vote onchain.",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "Technodemocracy",
     description: "Magical internet votes. Join a digital party. Vote onchain.",
-    url: "https://technodemocracy.app",
+    url: SITE_URL,
     siteName: "Technodemocracy",
     type: "website",
   },
@@ -41,6 +70,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <PostHogProvider>
           <Providers>
             <div className="relative flex min-h-screen flex-col">
