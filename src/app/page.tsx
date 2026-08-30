@@ -57,8 +57,9 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-3">The Franchise</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Joining a digital party is more than a Reddit upvote. It is a
-              binding grant of digital power — a social smart contract.
+              The Technodemocracy franchise is more than a Reddit upvote: it is
+              a proposed social smart contract that grants named powers, limits
+              each power, records consent, and lets a member revoke permission.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -66,27 +67,30 @@ export default function LandingPage() {
               <KeyRound className="h-6 w-6 mb-4 text-primary" />
               <h3 className="font-semibold mb-2">Granular Permissions</h3>
               <p className="text-sm text-muted-foreground">
-                Like Google OAuth — but for political parties. You explicitly
-                consent to which powers the party president holds over your
-                wallet, and revoke them at any time.
+                Granular permissions work like OAuth for a political party. A
+                member chooses which powers a president may exercise over a
+                wallet, sees the exact limits, and can revoke each grant instead
+                of surrendering blanket authority.
               </p>
             </div>
             <div className="rounded-lg border bg-card p-6">
               <ScrollText className="h-6 w-6 mb-4 text-primary" />
               <h3 className="font-semibold mb-2">Binding Campaign Promises</h3>
               <p className="text-sm text-muted-foreground">
-                Both party and member are bound. Provably limited government —
-                the president can slash $100, never $10,000. Powers are
-                cryptographically scoped.
+                Binding campaign promises constrain both the party and the
+                member through explicit contract parameters. A $100 slashing
+                ceiling cannot silently become $10,000, and every delegated
+                power remains limited to its recorded scope.
               </p>
             </div>
             <div className="rounded-lg border bg-card p-6">
               <Globe2 className="h-6 w-6 mb-4 text-primary" />
               <h3 className="font-semibold mb-2">Truly Universal</h3>
               <p className="text-sm text-muted-foreground">
-                Universal franchise: anyone votes for anyone. Universal
-                candidacy: anyone runs for anything. No geography, no two-party
-                trap. The endless-party system.
+                Universal franchise lets any wallet support any eligible party,
+                while universal candidacy lets any wallet propose a new one.
+                Technodemocracy models an open-ended party system without a
+                geographic ballot or fixed two-party gate.
               </p>
             </div>
           </div>
@@ -105,8 +109,10 @@ export default function LandingPage() {
               </div>
               <h3 className="font-semibold text-lg">1. Follow</h3>
               <p className="text-sm text-muted-foreground">
-                Connect your wallet. Follow the party president and members
-                onchain. This alone signals alignment.
+                The Follow step connects a wallet and records which party slate
+                the member intends to support. In this public prototype, the
+                interaction is demonstrated in the browser rather than written
+                as a live blockchain transaction.
               </p>
             </div>
             <div className="flex flex-col items-center text-center gap-4 p-6">
@@ -115,8 +121,10 @@ export default function LandingPage() {
               </div>
               <h3 className="font-semibold text-lg">2. Fund</h3>
               <p className="text-sm text-muted-foreground">
-                Pay annual party dues. Capital and time commitment is what
-                distinguishes a real party from a mailing list.
+                The Fund step defines an annual USDC commitment before consent
+                is granted. A real deployment would require the wallet owner to
+                approve the transaction and would keep the amount bounded by the
+                visible franchise terms.
               </p>
             </div>
             <div className="flex flex-col items-center text-center gap-4 p-6">
@@ -125,8 +133,10 @@ export default function LandingPage() {
               </div>
               <h3 className="font-semibold text-lg">3. Franchise</h3>
               <p className="text-sm text-muted-foreground">
-                Grant the president scoped digital authority — a binding social
-                smart contract. Receive your soulbound &quot;I voted&quot; NFT, verifiable on Basescan.
+                The Franchise step shows the exact voting, norms, slashing, and
+                naming permissions requested by a party. A production contract
+                could issue a soulbound vote receipt after confirmation; the
+                current site displays a demonstration receipt only.
               </p>
             </div>
           </div>
@@ -137,26 +147,27 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 max-w-3xl text-center">
           <h2 className="text-3xl font-bold mb-4">Streaming votes</h2>
           <p className="text-muted-foreground mb-8">
-            Forget &quot;election day.&quot; Every vote is registered onchain the moment
-            it&apos;s cast. More like Twitter than the DMV. Any third party can
-            verify these are real people, not bots.
+            Streaming voting replaces a single election day with a continuously
+            inspectable tally. The prototype demonstrates how each confirmed
+            vote could create a public record that independent observers can
+            verify, while the current totals below remain sample data.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto text-center mb-8">
             <div>
-              <p className="text-3xl font-bold">{parties.length}</p>
-              <p className="text-sm text-muted-foreground">Active Parties</p>
+              <div className="text-3xl font-bold">{parties.length}</div>
+              <div className="text-sm text-muted-foreground">Demo parties</div>
             </div>
             <div>
-              <p className="text-3xl font-bold">{totalMembers.toLocaleString()}</p>
-              <p className="text-sm text-muted-foreground">Members</p>
+              <div className="text-3xl font-bold">{totalMembers.toLocaleString()}</div>
+              <div className="text-sm text-muted-foreground">Demo members</div>
             </div>
             <div>
-              <p className="text-3xl font-bold">{formatUSDC(totalTreasury)}</p>
-              <p className="text-sm text-muted-foreground">Total Treasuries</p>
+              <div className="text-3xl font-bold">{formatUSDC(totalTreasury)}</div>
+              <div className="text-sm text-muted-foreground">Demo treasuries</div>
             </div>
             <div>
-              <p className="text-3xl font-bold">∞</p>
-              <p className="text-sm text-muted-foreground">Possible parties</p>
+              <div className="text-3xl font-bold">∞</div>
+              <div className="text-sm text-muted-foreground">Possible parties</div>
             </div>
           </div>
           <Link href="/feed">
@@ -173,9 +184,10 @@ export default function LandingPage() {
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold mb-3">Democratic legitimacy, measured</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Just like Bitcoin&apos;s market cap eventually surpassed the Turkish
-              lira, technodemocracy&apos;s vote count surpasses fiat
-              presidential elections one benchmark at a time.
+              The legitimacy meter compares the prototype&apos;s sample vote total
+              with published election-scale benchmarks. A future live system
+              would need independently verifiable membership and transaction
+              records before its tally could support any real legitimacy claim.
             </p>
           </div>
           <LegitimacyMeter currentVotes={totalVotes} variant="full" />
@@ -186,8 +198,10 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 text-center max-w-2xl">
           <h2 className="text-3xl font-bold mb-4">Find your party.</h2>
           <p className="text-muted-foreground mb-8">
-            Or start one. Don&apos;t Die, Mars, Open-Source AI, your own.
-            Cryptographically verifiable democratic legitimacy starts with one wallet.
+            The party quiz and directory let visitors compare sample communities
+            such as Don&apos;t Die, Mars, and Open-Source AI, then model a new party
+            of their own. No quiz answer or draft party is persisted by this
+            prototype.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link href="/join-quiz">

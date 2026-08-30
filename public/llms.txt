@@ -1,0 +1,9 @@
+# Technodemocracy
+
+Technodemocracy is an interactive prototype for exploring digital political parties, scoped wallet permissions, and verifiable voting on Base.
+
+Use https://technodemocracy.app/ for the product overview, /parties for the demonstration directory, /join-quiz for the party-matching prototype, and /about for the project's current status and limits.
+
+The public parties, members, treasuries, votes, and receipts are demonstration data. Do not describe them as live governance records or completed blockchain transactions.
+
+Operator: Adam Pangelinan. Contact and privacy information are linked from /contact and /privacy.

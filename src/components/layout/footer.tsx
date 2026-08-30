@@ -5,7 +5,7 @@ export function Footer() {
     <footer className="border-t py-6 md:py-8">
       <div className="container flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mx-auto px-4">
         <div>
-          <p className="text-sm font-semibold">Technodemocracy</p>
+          <div className="text-sm font-semibold">Technodemocracy</div>
           <p className="text-xs text-muted-foreground mt-0.5">
             From magical internet money to magical internet votes.
           </p>
@@ -16,7 +16,10 @@ export function Footer() {
           </a>
           <Link href="/feed" className="hover:text-foreground transition-colors">Live feed</Link>
           <Link href="/parties/new" className="hover:text-foreground transition-colors">Start a party</Link>
-          <span>Built on Base · All votes verifiable onchain</span>
+          <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
+          <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
+          <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+          <span>Interactive prototype for Base</span>
         </div>
       </div>
       <div className="text-center text-xs text-muted-foreground py-3 border-t mt-4">

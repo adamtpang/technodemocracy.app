@@ -24,7 +24,7 @@ const websiteJsonLd = {
   url: SITE_URL,
   name: "Technodemocracy",
   description:
-    "From the financial crisis of 2008 to the political crisis of 2024. Join a digital party. Grant a binding franchise. Vote onchain.",
+    "An interactive prototype for scoped digital parties, wallet consent, and verifiable voting workflows on Base.",
   publisher: { "@id": `${SITE_URL}/#organization` },
 };
 
@@ -37,13 +37,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "Technodemocracy — magical internet votes",
   description:
-    "From the financial crisis of 2008 to the political crisis of 2024. Join a digital party. Grant a binding franchise. Vote onchain.",
+    "Explore a prototype for scoped digital parties, wallet consent, and verifiable voting workflows on Base.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: "Technodemocracy",
-    description: "Magical internet votes. Join a digital party. Vote onchain.",
+    description: "A prototype for scoped digital parties and verifiable voting workflows on Base.",
     url: SITE_URL,
     siteName: "Technodemocracy",
     type: "website",
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Technodemocracy — magical internet votes",
     description:
-      "Join a digital party. Grant a binding franchise. Vote onchain.",
+      "Explore scoped digital parties and verifiable voting workflows on Base.",
   },
 };
 
