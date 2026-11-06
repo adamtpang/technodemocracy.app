@@ -34,7 +34,7 @@
     "tailwindcss-animate": "^1.0.7",
     "viem": "^2.57.14",
     "wagmi": "^2.14.16",
-    "posthog-js": "^1.444.2"
+    "posthog-js": "^1.444.3"
   },
   "devDependencies": {
     "@types/node": "^22.12.0",
